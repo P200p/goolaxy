@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cyber Holo Orbit</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at center, rgba(0,0,0,0.1) 50%, rgba(5,0,20,1) 100%),
+          url('./image/bg.png') no-repeat center center / cover;
+        background-color: #050010;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      /* 🌈 SVG Overlay HUD */
+      #edgeOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2;
+        mix-blend-mode: screen;
+      }
+
+      /* เอฟเฟกต์พัลส์เรืองแสง */
+      @keyframes glowPulse {
+        0% { opacity: 0.2; }
+        100% { opacity: 0.5; }
+      }
+
+      #edgeOverlay rect {
+        animation: glowPulse 3s infinite alternate;
+      }
+
+      /* 🔄 วงพลังหมุนกลางจอ */
+      .center-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 400px;
+        height: 400px;
+        transform: translate(-50%, -50%);
+        animation: rotate 12s linear infinite;
+        opacity: 0.35;
+        z-index: 3;
+      }
+
+      @keyframes rotate {
+        from { transform: translate(-50%, -50%) rotate(0deg); }
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 🌐 Three.js Canvas -->
+    <script type="module" src="./main.js"></script>
+
+    <!-- 🌀 วงพลังหมุน (จาก co2.svg) -->
+    <img src="./co2.svg" class="center-ring" alt="energy ring" />
+
+    <!-- 🔷 SVG ขอบเรืองแสง -->
+    <svg id="edgeOverlay">
+      <defs>
+        <linearGradient id="edgeGlow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0ff" stop-opacity="0.2" />
+          <stop offset="50%" stop-color="#f0f" stop-opacity="0.3" />
+          <stop offset="100%" stop-color="#00f" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+
+      <!-- กรอบเรืองแสง -->
+      <rect x="0" y="0" width="100%" height="100%"
+            fill="url(#edgeGlow)" stroke="#0ff" stroke-width="2" opacity="0.3" />
+
+      <!-- เส้นมุม -->
+      <g stroke="#0ff" stroke-width="1.5" opacity="0.6">
+        <!-- มุมบนซ้าย -->
+        <line x1="0" y1="0" x2="80" y2="0" />
+        <line x1="0" y1="0" x2="0" y2="80" />
+        <!-- มุมบนขวา -->
+        <line x1="100%" y1="0" x2="calc(100% - 80)" y2="0" />
+        <line x1="100%" y1="0" x2="100%" y2="80" />
+        <!-- มุมล่างซ้าย -->
+        <line x1="0" y1="100%" x2="80" y2="100%" />
+        <line x1="0" y1="100%" x2="0" y2="calc(100% - 80)" />
+        <!-- มุมล่างขวา -->
+        <line x1="100%" y1="100%" x2="calc(100% - 80)" y2="100%" />
+        <line x1="100%" y1="100%" x2="100%" y2="calc(100% - 80)" />
+      </g>
+    </svg>
+  </body>
+</html>
