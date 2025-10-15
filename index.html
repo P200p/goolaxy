@@ -68,8 +68,8 @@
   </head>
   <body>
     <!-- 🌐 Three.js Canvas -->
-    <script type="module" src="./main.js"></script>
     <canvas id="threeCanvas"></canvas>
+
     <!-- 🔷 SVG ขอบเรืองแสง -->
     <svg id="edgeOverlay">
       <defs>
@@ -82,10 +82,9 @@
 
       <!-- กรอบเรืองแสง -->
       <rect x="0" y="0" width="100%" height="100%"
-            fill="url(#edgeGlow)" stroke="#0ff" stroke-width="2" opacity="0.3" />
-
-
-      </g>
+            fill="none" stroke="url(#edgeGlow)" stroke-width="2" opacity="0.6" />
     </svg>
+
+    <script type="module" src="./main.js"></script>
   </body>
 </html>
