@@ -187,7 +187,7 @@ cardsContainer.addEventListener('touchmove', (e) => {
   dragSpeed = deltaX * 0.001;
   startX = e.touches[0].clientX;
 }, { passive: true });
-fetch('./cards.json')
+fetch('./public/cards.json')
   .then(res => res.json())
   .then(data => {
     // สร้างการ์ด
