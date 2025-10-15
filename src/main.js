@@ -197,3 +197,16 @@ fetch('./public/cards.json')
     console.error("cards.json not found, running sphere only", err);
     animate(); // ✅ รัน sphere ต่อให้ไม่มีการ์ด
   });
+  cardsContainer.addEventListener('mousedown', (e) => {
+  if (e.button === 1) {
+    // 👇 ฟังก์ชันพิเศษตอนกดลูกกลิ้ง
+    console.log("Middle click detected!");
+    // ตัวอย่าง: reset กล้อง
+    camera.position.set(0, 0, 20);
+    camera.lookAt(0, 0, 0);
+  } else if (e.button === 0) {
+    // left click → drag
+    isDragging = true;
+    startX = e.clientX;
+  }
+});
