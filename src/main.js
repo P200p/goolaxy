@@ -157,7 +157,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-});
+}, { passive: true });
 
 // --- Gesture ---
 let isDragging = false;
@@ -166,27 +166,27 @@ let startX = 0;
 cardsContainer.addEventListener('mousedown', (e) => {
   isDragging = true;
   startX = e.clientX;
-});
+}, { passive: true });
 cardsContainer.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
   const deltaX = e.clientX - startX;
   dragSpeed = deltaX * 0.001;
   startX = e.clientX;
-});
+}, { passive: true });
 cardsContainer.addEventListener('mouseup', () => {
   isDragging = false;
-});
+}, { passive: true });
 cardsContainer.addEventListener('mouseleave', () => {
   isDragging = false;
-});
+}, { passive: true });
 cardsContainer.addEventListener('touchstart', (e) => {
   startX = e.touches[0].clientX;
-});
+}, { passive: true });
 cardsContainer.addEventListener('touchmove', (e) => {
   const deltaX = e.touches[0].clientX - startX;
   dragSpeed = deltaX * 0.001;
   startX = e.touches[0].clientX;
-});
+}, { passive: true });
 fetch('./cards.json')
   .then(res => res.json())
   .then(data => {
