@@ -187,3 +187,13 @@ cardsContainer.addEventListener('touchmove', (e) => {
   dragSpeed = deltaX * 0.001;
   startX = e.touches[0].clientX;
 });
+fetch('./cards.json')
+  .then(res => res.json())
+  .then(data => {
+    // สร้างการ์ด
+    animate();
+  })
+  .catch(err => {
+    console.error("cards.json not found, running sphere only", err);
+    animate(); // ✅ รัน sphere ต่อให้ไม่มีการ์ด
+  });
