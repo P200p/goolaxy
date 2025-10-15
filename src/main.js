@@ -120,14 +120,14 @@ function updateCards() {
     obj.pos.set(x, y, z);
 
     const screenPos = obj.pos.clone().project(camera);
-    const left = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
-    const top = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+    const left = (screenPos.x * 0.2 + 0.2) * window.innerWidth;
+    const top = (-screenPos.y * 0.2 + 0.2) * window.innerHeight;
     obj.el.style.left = `${left}px`;
     obj.el.style.top = `${top}px`;
 
     const depthScale = 1 + (obj.pos.z / radius) * 0.5;
     obj.el.style.transform = `translate(-50%, -50%) scale(${depthScale})`;
-    obj.el.style.opacity = `${0.5 + 0.5 * (obj.pos.z / radius + 1) / 2}`;
+    obj.el.style.opacity = `${0.2 + 0.2 * (obj.pos.z / radius + 1) / 2}`;
   });
 
   dragSpeed *= 0.95;
