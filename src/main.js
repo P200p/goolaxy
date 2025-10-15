@@ -143,8 +143,8 @@ function animate() {
   camera.position.z = Math.cos(angle) * 1;
   camera.lookAt(scene.position);
 
-  sphere.rotation.y += 0.005;
-  sphere.rotation.x += 0.004;
+  sphere.rotation.y += 0.001;
+  sphere.rotation.x += 0.001;
 
   controls.update();
   renderer.clear();
