@@ -55,7 +55,7 @@ document.body.appendChild(cardsContainer);
 
 const radius = 3.5;
 const cardObjects = [];
-let rotationSpeed = 0.001;
+let rotationSpeed = 0.0003;
 let dragSpeed = 0;
 
 // --- Load cards.json ---
