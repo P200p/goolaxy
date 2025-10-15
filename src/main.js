@@ -26,7 +26,7 @@ scene.add(sphere);
 
 // --- Small Sphere ---
 const smallSphere = new THREE.Mesh(
-  new THREE.SphereGeometry(0.8, 12, 32),
+  new THREE.SphereGeometry(0.2, 12, 32),
   new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
 );
 scene.add(smallSphere);
