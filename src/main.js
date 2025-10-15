@@ -127,7 +127,7 @@ function updateCards() {
 
     const depthScale = 1 + (obj.pos.z / radius) * 0.5;
     obj.el.style.transform = `translate(-50%, -50%) scale(${depthScale})`;
-    obj.el.style.opacity = `${0.2 + 0.2 * (obj.pos.z / radius + 1) / 2}`;
+    obj.el.style.opacity = `${0.5 + 0.5 * (obj.pos.z / radius + 1) / 2}`;
   });
 
   dragSpeed *= 0.95;
@@ -139,8 +139,8 @@ function animate() {
   requestAnimationFrame(animate);
 
   angle += 0.01;
-  camera.position.x = Math.sin(angle) * 3;
-  camera.position.z = Math.cos(angle) * 3;
+  camera.position.x = Math.sin(angle) * 1;
+  camera.position.z = Math.cos(angle) * 1;
   camera.lookAt(scene.position);
 
   sphere.rotation.y += 0.005;
