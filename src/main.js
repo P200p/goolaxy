@@ -13,10 +13,19 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 0, 6);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+// Prefer using the existing canvas in `index.html` if present. This avoids a second canvas
+// being appended which can cause layering/visibility issues when an overlay is used.
+const existingCanvas = document.getElementById('threeCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas: existingCanvas || undefined, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 0);
-document.body.appendChild(renderer.domElement);
+if (!existingCanvas) {
+  // only append when there is no canvas in the DOM
+  document.body.appendChild(renderer.domElement);
+} else {
+  console.debug('Using existing canvas#threeCanvas for renderer');
+}
 
 // -------------------- OBJECTS --------------------
 // ตัวอย่าง: background sphere
@@ -41,27 +50,58 @@ controls.enableDamping = true;
 
 // -------------------- STATE VARIABLES --------------------
 const loader = new ObjectLoader();
-const cards = [];                    // sprites loaded from cards.json
+const cards = [];                    // sprites (THREE.Sprite) loaded from cards.json
 const pointer = new Vector2();       // for raycasting
 const raycaster = new Raycaster();   // for raycasting
 let hoveredCard = null;              // current hovered sprite
 
 // -------------------- FETCH CARDS (3D JSON) --------------------
-fetch("./cards.json")
-  .then(r => r.json())
-  .then(data => {
-    const obj = loader.parse(data);
-    scene.add(obj);
+// Try a few likely locations for `cards.json` and give helpful console output so it's
+// easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
+async function loadCards() {
+  const tryPaths = [
+    './cards.json',         // colocated with index.html
+    './public/cards.json',  // common dev layout where 'public' folder holds assets
+    '/public/cards.json'
+  ];
 
-    obj.traverse(child => {
-      if (child.isSprite) cards.push(child);
-    });
+  let lastErr = null;
+  for (const p of tryPaths) {
+    try {
+      console.debug(`Attempting to fetch cards JSON from: ${p}`);
+      const res = await fetch(p);
+      if (!res.ok) {
+        lastErr = new Error(`HTTP ${res.status} when fetching ${p}`);
+        console.warn(lastErr.message);
+        continue;
+      }
+      const data = await res.json();
+      const obj = loader.parse(data);
+      scene.add(obj);
 
-    // Positions remain as authored in your scene/JSON
-  })
-  .catch(err => {
-    console.error("Failed to load cards.json:", err);
-  });
+      obj.traverse(child => {
+        if (child.isSprite) {
+          // store original scale so hover can be non-destructive
+          child.userData = child.userData || {};
+          child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
+          cards.push(child);
+        }
+      });
+
+      console.info(`Loaded cards object from ${p}. Found ${cards.length} sprite(s).`);
+      if (cards.length === 0) console.warn('No sprites found in parsed cards.json object.');
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`Error loading ${p}:`, err);
+      // try next path
+    }
+  }
+
+  console.error('Failed to load cards.json from any tried path.', lastErr);
+}
+
+loadCards();
 
 // -------------------- ANIMATE LOOP --------------------
 function animate() {
@@ -93,14 +133,20 @@ function onMouseMove(event) {
     const sprite = intersects[0].object;
        if (hoveredCard !== sprite) {
       // restore previous
-      if (hoveredCard) hoveredCard.scale.setScalar(1.0);
+      if (hoveredCard) {
+        const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
+        hoveredCard.scale.setScalar(prevOrig);
+      }
       hoveredCard = sprite;
       // non-destructive visual feedback (scale-only)
-      hoveredCard.scale.setScalar(10.15);
+      const orig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : (hoveredCard.scale.x || 1);
+      const HOVER_FACTOR = 1.5;
+      hoveredCard.scale.setScalar(orig * HOVER_FACTOR);
     }
   } else {
     if (hoveredCard) {
-      hoveredCard.scale.setScalar(5.0);
+      const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
+      hoveredCard.scale.setScalar(prevOrig);
       hoveredCard = null;
     }
   }
