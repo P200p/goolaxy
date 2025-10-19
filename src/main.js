@@ -61,12 +61,18 @@ function updateCards() {
   });
 }
 // -------------------- FETCH CARDS (3D JSON) --------------------
+// -------------------- FETCH CARDS (3D JSON) --------------------
 fetch("./cards.json")
   .then(r => r.json())
   .then(data => {
     const obj = loader.parse(data);
     scene.add(obj);
-    cards.push(...obj.children);
+
+    obj.traverse(child => {
+      if (child.isSprite) {
+        cards.push(child);
+      }
+    });
   });
 
 // -------------------- ANIMATE LOOP --------------------
@@ -103,14 +109,15 @@ function onClick(event) {
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
-  const intersects = raycaster.intersectObjects(cards);
+  const intersects = raycaster.intersectObjects(cards, true); // recursive
 
   if (intersects.length > 0) {
-    const card = intersects[0].object;
-    if (card.userData && card.userData.url) {
-      window.open(card.userData.url, "_blank");
+    const sprite = intersects[0].object;
+    if (sprite.material && sprite.material.userData && sprite.material.userData.url) {
+      window.open(sprite.material.userData.url, "_blank");
     }
   }
 }
 window.addEventListener("click", onClick);
+
 animate();
