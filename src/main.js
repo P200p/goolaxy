@@ -1,5 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ObjectLoader, Raycaster, Vector2 } from "three";
+
+const loader = new THREE.ObjectLoader();
+fetch("./cards.json")
+  .then(r => r.json())
+  .then(data => {
+    const obj = loader.parse(data);
+    scene.add(obj);
+    cards.push(...obj.children); // เก็บ reference การ์ดทั้งหมด
+  });
 
 // --- Scene / Camera / Renderer ---
 const scene = new THREE.Scene();
@@ -210,3 +220,22 @@ fetch('./public/cards.json')
     startX = e.clientX;
   }
 });
+const raycaster = new Raycaster();
+const mouse = new Vector2();
+
+function onClick(event) {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(cards, true);
+
+  if (intersects.length > 0) {
+    const card = intersects[0].object;
+    const url = card.material?.userData?.url || card.userData?.url;
+    if (url && camera.position.distanceTo(card.position) < 5) {
+      alert("ลิงก์การ์ด: " + url);
+    }
+  }
+}
+window.addEventListener("click", onClick);
