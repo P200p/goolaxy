@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🫣</title>
+<style>
+  :root {
+    --hud-fg: #00ffea;
+    --hud-fg2: #8affff;
+    --hud-bg: rgba(10, 14, 16, 0.7);
+    --hud-glow: 0 0 12px rgba(0,255,234,0.6), 0 0 24px rgba(0,255,234,0.3);
+  }
+
+  .hud {
+    position: fixed; inset: 20px;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .hud__frame {
+    position: absolute; inset: 0;
+    border: 1px solid var(--hud-fg);
+    box-shadow: var(--hud-glow);
+    background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.05));
+  }
+
+  .hud__corner {
+    position: absolute; width: 44px; height: 44px;
+    border: 2px solid var(--hud-fg);
+    filter: drop-shadow(0 0 8px rgba(0,255,234,0.6));
+    background:
+      linear-gradient(90deg, var(--hud-fg) 0 2px, transparent 2px),
+      linear-gradient(180deg, var(--hud-fg) 0 2px, transparent 2px);
+  }
+  .hud__corner--tl { top: -2px; left: -2px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .hud__corner--tr { top: -2px; right: -2px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+  .hud__corner--bl { bottom: -2px; left: -2px; clip-path: polygon(0 0, 0 100%, 100% 100%); }
+  .hud__corner--br { bottom: -2px; right: -2px; clip-path: polygon(100% 0, 0 100%, 100% 100%); }
+
+  .hud__scanline {
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,255,234,0.03) 0px,
+        rgba(0,255,234,0.03) 2px,
+        transparent 3px,
+        transparent 6px
+      );
+    mix-blend-mode: screen;
+    animation: scan 6s linear infinite;
+    opacity: 0.8;
+  }
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  .hud__label {
+    position: absolute; left: 24px; top: 24px;
+    color: var(--hud-fg); font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 4px rgba(0,255,234,0.8);
+    background: var(--hud-bg);
+    padding: 8px 10px; border: 1px solid var(--hud-fg2);
+    backdrop-filter: blur(4px);
+  }
+</style>
+ </head>
+  <body>
+<div class="hud">
+  <div class="hud__frame"></div>
+  <div class="hud__corner hud__corner--tl"></div>
+  <div class="hud__corner hud__corner--tr"></div>
+  <div class="hud__corner hud__corner--bl"></div>
+  <div class="hud__corner hud__corner--br"></div>
+  <div class="hud__scanline"></div>
+  <div class="hud__label">GOO/OPS: ACTIVE</div>
+</div>
+
+
+<svg viewBox="0 0 1200 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block">
+  <defs>
+    <filter id="glitch">
+      <feFlood flood-color="#00ffea" result="f1" />
+      <feFlood flood-color="#ff007a" result="f2" />
+      <feOffset in="SourceGraphic" dx="2" dy="0" result="o1"/>
+      <feOffset in="SourceGraphic" dx="-2" dy="0" result="o2"/>
+      <feComposite in="f1" in2="o1" operator="in" result="c1"/>
+      <feComposite in="f2" in2="o2" operator="in" result="c2"/>
+      <feMerge>
+        <feMergeNode in="c1"/>
+        <feMergeNode in="c2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="gooGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00ffea"/>
+      <stop offset="100%" stop-color="#8affff"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="100%" height="100%" fill="transparent"/>
+  <g filter="url(#glitch)">
+    <text x="50%" y="55%" text-anchor="middle"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, Monaco"
+          font-size="84" font-weight="800"
+          fill="url(#gooGrad)" letter-spacing="4">
+      GOO // OPS
+    </text>
+    <text x="50%" y="78%" text-anchor="middle"
+          font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, Monaco"
+          font-size="22" fill="#00ffea" opacity="0.9" letter-spacing="6">
+      system: ready · channel: free
+    </text>
+  </g>
+</svg>
+<div class="term term--accent">
+  <div class="term__head">
+    <span class="dot dot--ok"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <strong>GOO/CONSOLE</strong>
+  </div>
+  <div class="term__body">
+    <p><span class="caret">></span> deploy —status</p>
+    <p><span class="caret">></span> link —resolve —partner:goatbet</p>
+    <p><span class="caret">></span> cards —split 3 —progressive:on</p>
+  </div>
+</div>
+
+<style>
+  .term {
+    --c: #0ef; --bg: #0b0f12; --bga: rgba(11,15,18,.75);
+    border: 1px solid var(--c); border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,255,234,.15);
+    background: var(--bga);
+    color: var(--c);
+    font: 500 13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, Monaco;
+    overflow: hidden; max-width: 680px; margin: 24px auto;
+  }
+  .term--accent { outline: 1px solid rgba(0,255,234,.25); }
+  .term__head {
+    display: flex; gap: 10px; align-items: center;
+    padding: 10px 12px; background: rgba(0,255,234,.06);
+    letter-spacing: .12em;
+  }
+  .term__head strong { font-size: 12px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #1b2b30; box-shadow: 0 0 6px rgba(0,255,234,.25); }
+  .dot--ok { background: #00ffea; }
+  .term__body { padding: 14px 16px; }
+  .caret { color: #ff007a; margin-right: 8px; text-shadow: 0 0 6px rgba(255,0,122,.6); }
+  .term p { margin: 6px 0; }
+</style>
+  </body>
+</html>
