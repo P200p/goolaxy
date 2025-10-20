@@ -152,5 +152,137 @@
   .caret { color: #ff007a; margin-right: 8px; text-shadow: 0 0 6px rgba(255,0,122,.6); }
   .term p { margin: 6px 0; }
 </style>
+    <div class="holo">
+  <div class="holo__wire"></div>
+  <div class="holo__label">GOO/CHANNEL: FREE</div>
+  <div class="holo__scan"></div>
+</div>
+
+<style>
+  .holo {
+    position: relative; width: 520px; max-width: 92vw; height: 260px; margin: 24px auto;
+    border: 1px solid rgba(0,255,234,.8); border-radius: 12px;
+    background: linear-gradient(180deg, rgba(0,255,234,.08), rgba(0,255,234,.02));
+    box-shadow: 0 0 24px rgba(0,255,234,.22), inset 0 0 42px rgba(0,255,234,.12);
+    backdrop-filter: blur(6px) saturate(1.1);
+    overflow: hidden;
+  }
+  .holo__wire {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(transparent 60%, rgba(0,255,234,.18)),
+      repeating-linear-gradient(to right, rgba(0,255,234,.35) 0 1px, transparent 1px 36px),
+      repeating-linear-gradient(to bottom, rgba(0,255,234,.25) 0 1px, transparent 1px 28px);
+    mask-image: radial-gradient(300px 140px at 20% 30%, black 40%, transparent 100%);
+    opacity: .7;
+  }
+  .holo__label {
+    position: absolute; top: 14px; left: 16px; padding: 6px 10px;
+    color: #0ff; font: 700 12px/1 ui-monospace, Menlo, Consolas, Monaco;
+    border: 1px solid rgba(0,255,234,.6); background: rgba(0,255,234,.06);
+    letter-spacing: .12em; text-shadow: 0 0 8px rgba(0,255,234,.9);
+  }
+  .holo__scan {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 0 48%, rgba(0,255,234,.18) 50%, transparent 52% 100%);
+    animation: holo-scan 3.8s linear infinite;
+    mix-blend-mode: screen;
+  }
+  @keyframes holo-scan {
+    0% { transform: translateY(-120%); }
+    100% { transform: translateY(120%); }
+  }
+</style>
+<svg viewBox="0 0 400 300" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:16px auto;max-width:700px">
+  <defs>
+    <linearGradient id="wireGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00ffea"/>
+      <stop offset="100%" stop-color="#8affff"/>
+    </linearGradient>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="1.6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- background hint -->
+  <rect x="0" y="0" width="100%" height="100%" fill="transparent"/>
+  <!-- cube edges -->
+  <g stroke="url(#wireGrad)" stroke-width="2" fill="none" filter="url(#softGlow)" opacity="0.95">
+    <!-- front square -->
+    <rect x="90" y="80" width="140" height="140" />
+    <!-- rear square (offset) -->
+    <rect x="150" y="40" width="140" height="140" />
+    <!-- connectors -->
+    <line x1="90" y1="80" x2="150" y2="40"/>
+    <line x1="230" y1="80" x2="290" y2="40"/>
+    <line x1="90" y1="220" x2="150" y2="180"/>
+    <line x1="230" y1="220" x2="290" y2="180"/>
+  </g>
+
+  <!-- label -->
+  <text x="50%" y="92%" text-anchor="middle"
+        font-family="ui-monospace, Menlo, Consolas, Monaco"
+        font-size="14" fill="#00ffea" letter-spacing="3">
+    WIREFRAME MODE // GOO OPS
+  </text>
+</svg>
+<div class="wf-btns">
+  <button class="wf-btn">SCAN</button>
+  <button class="wf-btn">DEPLOY</button>
+  <button class="wf-btn">LINK MAP</button>
+</div>
+
+<style>
+  .wf-btns { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin:16px 0; }
+  .wf-btn {
+    --c:#00ffea; --c2:#8affff; --bg:rgba(0,255,234,.06);
+    color: var(--c); background: transparent;
+    border: 2px solid var(--c); border-radius: 10px; padding: 10px 16px;
+    font: 700 12px/1 ui-monospace, Menlo, Consolas; letter-spacing:.18em;
+    text-transform: uppercase;
+    box-shadow: 0 0 14px rgba(0,255,234,.25), inset 0 0 18px rgba(0,255,234,.12);
+    position: relative; overflow: hidden;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .wf-btn::before, .wf-btn::after {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    border: 1px dashed rgba(0,255,234,.3); border-radius: 10px;
+    transform: scale(.96);
+  }
+  .wf-btn::after {
+    border-color: rgba(138,255,255,.35);
+    transform: scale(.90);
+  }
+  .wf-btn:hover {
+    border-color: var(--c2);
+    transform: translateY(-1px);
+    box-shadow: 0 0 20px rgba(0,255,234,.35), inset 0 0 26px rgba(0,255,234,.16);
+  }
+</style>
+<div class="wire-card">
+  <h3 class="wire-title">$Goo — Wireframe</h3>
+  <p>Split scenes · Progressive load · Assets streaming</p>
+</div>
+
+<style>
+  .wire-card {
+    position: relative; max-width: 720px; margin: 24px auto; padding: 18px 20px;
+    color:#0ff; background: rgba(0,255,234,.05); border: 1px solid rgba(0,255,234,.6);
+    box-shadow: 0 0 16px rgba(0,255,234,.2); border-radius: 14px;
+  }
+  .wire-card::before, .wire-card::after {
+    content:""; position:absolute; width: 64px; height: 64px; pointer-events:none;
+    border: 2px solid rgba(0,255,234,.9);
+    filter: drop-shadow(0 0 8px rgba(0,255,234,.6));
+  }
+  .wire-card::before { top:-2px; left:-2px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .wire-card::after  { bottom:-2px; right:-2px; clip-path: polygon(100% 0, 0 100%, 100% 100%); }
+  .wire-title { margin:0 0 8px; letter-spacing:.08em; text-transform:uppercase; }
+</style>
+
   </body>
 </html>
