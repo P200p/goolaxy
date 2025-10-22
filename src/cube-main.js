@@ -72,10 +72,10 @@ class WorkingIframeCube {
     this.isRotating = false;
     
     this.websites = [
-      { name: 'GOONEE', url: 'https://goonee.io' },
-      { name: 'GOORUM', url: 'https://goorum.io' },
-      { name: 'GOOLAXY', url: 'https://goolaxy.io' },
-      { name: 'GOOMETA', url: 'https://goometa.io' }
+      { name: 'GOONEE', url: 'https://goonee.netlify.app/' },
+      { name: 'SHARKKADAW', url: 'https://sharkkadaw.netlify.app/' },
+      { name: 'GOONEE LAB', url: 'https://goonee.netlify.app/lab' },
+      { name: 'GOOMETA', url: 'https://goometa.figma.site/' }
     ];
     
     this.createCube();
@@ -138,6 +138,21 @@ class WorkingIframeCube {
     
     // Enable pointer events for interaction
     iframe.style.pointerEvents = 'auto';
+    
+    // Add security and compatibility attributes
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+    
+    // Handle load errors gracefully
+    iframe.onerror = () => {
+      console.warn(`Failed to load iframe: ${url}`);
+      iframe.style.background = '#2a1a1a';
+    };
+    
+    iframe.onload = () => {
+      console.log(`Successfully loaded: ${name} (${url})`);
+    };
     
     return iframe;
   }
@@ -240,4 +255,9 @@ window.addEventListener('resize', onWindowResize, false);
 animate();
 
 console.log('🌐 3D Web Portal initialized!');
+console.log('📋 Available websites:');
+console.log('  0: GOONEE - https://goonee.netlify.app/');
+console.log('  1: SHARKKADAW - https://sharkkadaw.netlify.app/');
+console.log('  2: GOONEE LAB - https://goonee.netlify.app/lab');
+console.log('  3: GOOMETA - https://goometa.figma.site/');
 console.log('Use window.iframeCube.rotateTo(0-3) to navigate between websites');
