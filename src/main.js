@@ -2,8 +2,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ObjectLoader, Raycaster, Vector2 } from "three";
-import { CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
-import { WorkingIframeCube } from './WorkingIframeCube.js';
 
 // -------------------- SCENE / CAMERA / RENDERER --------------------
 const scene = new THREE.Scene();
@@ -15,8 +13,7 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 0, 6);
 
-// -------------------- RENDERERS --------------------
-// WebGL Renderer สำหรับ 3D objects ปกติ
+// -------------------- RENDERER --------------------
 const existingCanvas = document.getElementById('threeCanvas');
 const renderer = new THREE.WebGLRenderer({ canvas: existingCanvas || undefined, antialias: true, alpha: true });
 renderer.setPixelRatio(window.devicePixelRatio || 1);
@@ -27,16 +24,6 @@ if (!existingCanvas) {
 } else {
   console.debug('Using existing canvas#threeCanvas for renderer');
 }
-
-// CSS3D Renderer สำหรับ iframe cube
-const css3dRenderer = new CSS3DRenderer();
-css3dRenderer.setSize(window.innerWidth, window.innerHeight);
-css3dRenderer.domElement.style.position = 'absolute';
-css3dRenderer.domElement.style.top = '0';
-css3dRenderer.domElement.style.left = '0';
-css3dRenderer.domElement.style.pointerEvents = 'none';
-css3dRenderer.domElement.style.zIndex = '10';
-document.body.appendChild(css3dRenderer.domElement);
 
 // -------------------- OBJECTS --------------------
 // ตัวอย่าง: background sphere
@@ -66,23 +53,7 @@ const pointer = new Vector2();       // for raycasting
 const raycaster = new Raycaster();   // for raycasting
 let hoveredCard = null;              // current hovered sprite
 
-// -------------------- WORKING IFRAME CUBE --------------------
-const iframeCube = new WorkingIframeCube({
-  size: 400,
-  position: { x: 600, y: 0, z: 0 },
-  websites: [
-    'https://goonee.netlify.app/',
-    'https://goorum.netlify.app/', 
-    'https://gooneepaystop.netlify.app/',
-    'https://goometa.figma.site/'
-  ]
-});
 
-// เพิ่ม WebGL parts เข้า main scene
-scene.add(iframeCube.getWebGLScene());
-
-// เพิ่ม global reference สำหรับ controls
-window.iframeCube = iframeCube;
 
 // -------------------- FETCH CARDS (3D JSON) --------------------
 // Try a few likely locations for `cards.json` and give helpful console output so it's
@@ -137,15 +108,11 @@ loadCards();
 function animate() {
   requestAnimationFrame(animate);
 
-  // อัปเดต iframe cube
-  iframeCube.update();
-
   // If you later add editor-driven animation, make sure it doesn't overwrite authored positions here.
   controls.update();
   
-  // Render ทั้ง WebGL และ CSS3D
+  // Render scene
   renderer.render(scene, camera);
-  css3dRenderer.render(iframeCube.getCSS3DScene(), camera);
 }
 animate();
 
@@ -154,7 +121,6 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
 }, { passive: true });
 
 // -------------------- INTERACTION / HOVER --------------------

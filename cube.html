@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Web Portal - Goolaxy</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(
+            circle at center,
+            rgba(0, 0, 0, 0.1) 50%,
+            rgba(5, 0, 20, 1) 100%
+          ),
+          linear-gradient(45deg, #1a1a2e, #16213e, #0f3460);
+        background-color: #050010;
+      }
+
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
+
+      /* 🎮 Cube Controls */
+      .cube-controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(26, 26, 46, 0.9);
+        color: #00ffff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #00ffff;
+        font-size: 14px;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+      }
+
+      .cube-controls h4 {
+        margin: 0 0 10px 0;
+        color: #ffffff;
+        text-align: center;
+      }
+
+      .cube-controls button {
+        background: #00ffff;
+        color: #1a1a2e;
+        border: none;
+        padding: 8px 12px;
+        margin: 2px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+      }
+
+      .cube-controls button:hover {
+        background: #0080ff;
+        transform: scale(1.05);
+      }
+
+      /* Navigation */
+      .nav-button {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(26, 26, 46, 0.9);
+        color: #00ffff;
+        padding: 15px 20px;
+        border: 2px solid #00ffff;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .nav-button:hover {
+        background: #00ffff;
+        color: #1a1a2e;
+        transform: scale(1.05);
+      }
+
+      /* Info Panel */
+      .info-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(26, 26, 46, 0.9);
+        color: #00ffff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #00ffff;
+        font-size: 14px;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        max-width: 300px;
+      }
+
+      .info-panel h4 {
+        margin: 0 0 10px 0;
+        color: #ffffff;
+        text-align: center;
+      }
+
+      .info-panel ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .info-panel li {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 🌐 Three.js Canvas -->
+    <canvas id="threeCanvas"></canvas>
+
+    <!-- 🧭 Navigation -->
+    <a href="./index.html" class="nav-button">🎴 Go to Goolaxy Cards</a>
+
+    <!-- 📋 Info Panel -->
+    <div class="info-panel">
+      <h4>🌐 3D Web Portal</h4>
+      <ul>
+        <li>🖱️ Drag to rotate view</li>
+        <li>🔄 Auto-rotating cube</li>
+        <li>🌐 Live websites on faces</li>
+        <li>⚡ Click to interact</li>
+      </ul>
+    </div>
+
+    <!-- 🎮 Cube Controls -->
+    <div class="cube-controls">
+      <h4>🌐 Navigate Websites</h4>
+      <button type="button" onclick="window.iframeCube?.rotateTo(0)">GOONEE</button>
+      <button type="button" onclick="window.iframeCube?.rotateTo(1)">GOORUM</button>
+      <br>
+      <button type="button" onclick="window.iframeCube?.rotateTo(2)">GOOLAXY</button>
+      <button type="button" onclick="window.iframeCube?.rotateTo(3)">GOOMETA</button>
+    </div>
+
+    <script type="module" src="./src/cube-main.js"></script>
+  </body>
+</html>
