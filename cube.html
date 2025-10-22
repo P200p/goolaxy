@@ -28,6 +28,8 @@
         width: 100%;
         height: 100%;
         z-index: 1;
+        pointer-events: auto;
+        touch-action: none;
       }
 
       /* 🎮 Cube Controls */
@@ -44,6 +46,8 @@
         z-index: 1000;
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
+        pointer-events: auto;
+        user-select: none;
       }
 
       .cube-controls h4 {
@@ -89,6 +93,8 @@
         transition: all 0.3s ease;
         text-decoration: none;
         display: inline-block;
+        pointer-events: auto;
+        user-select: none;
       }
 
       .nav-button:hover {
@@ -112,6 +118,8 @@
         backdrop-filter: blur(5px);
         -webkit-backdrop-filter: blur(5px);
         max-width: 300px;
+        pointer-events: auto;
+        user-select: none;
       }
 
       .info-panel h4 {
@@ -127,6 +135,39 @@
 
       .info-panel li {
         margin: 5px 0;
+      }
+
+      /* 🚀 Enhanced iframe performance and touch handling */
+      iframe {
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        will-change: transform !important;
+        transform: translateZ(0) !important;
+        backface-visibility: hidden !important;
+        -webkit-backface-visibility: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        scroll-behavior: smooth !important;
+
+        /* Prevent selection and context menu interference */
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+
+        /* Optimize rendering */
+        image-rendering: optimizeSpeed;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: optimize-contrast;
+
+        /* Smooth transitions */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 📱 Mobile-specific optimizations */
+      @media (max-width: 768px) {
+        iframe {
+          touch-action: pan-x pan-y pinch-zoom !important;
+        }
       }
     </style>
   </head>
@@ -151,19 +192,11 @@
     <!-- 🎮 Cube Controls -->
     <div class="cube-controls">
       <h4>🌐 Navigate Websites</h4>
-      <button type="button" onclick="window.iframeCube?.rotateTo(0)">
-        GOONEE
-      </button>
-      <button type="button" onclick="window.iframeCube?.rotateTo(1)">
-        SHARKKADAW
-      </button>
+      <button type="button" onclick="window.rotateTo(0)">GOONEE</button>
+      <button type="button" onclick="window.rotateTo(1)">SHARKKADAW</button>
       <br />
-      <button type="button" onclick="window.iframeCube?.rotateTo(2)">
-        GOONEE LAB
-      </button>
-      <button type="button" onclick="window.iframeCube?.rotateTo(3)">
-        GOOMETA
-      </button>
+      <button type="button" onclick="window.rotateTo(2)">GOONEE LAB</button>
+      <button type="button" onclick="window.rotateTo(3)">GOOMETA</button>
     </div>
 
     <script type="module" src="./src/cube-main.js"></script>
