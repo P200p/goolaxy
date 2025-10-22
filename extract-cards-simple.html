@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cards.json Image Extractor - Simple Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .step {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .success { border-color: #4CAF50; background-color: #f8fff8; }
+        .error { border-color: #f44336; background-color: #fff8f8; }
+        .info { border-color: #2196F3; background-color: #f0f8ff; }
+        
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1976D2; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        
+        .log {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .file-input {
+            margin: 10px 0;
+            padding: 10px;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .file-input.dragover {
+            border-color: #2196F3;
+            background-color: #f0f8ff;
+        }
+        
+        .download-links {
+            margin: 10px 0;
+        }
+        
+        .download-links a {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        
+        .download-links a:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎴 Cards.json Image Extractor - Simple Version</h1>
+        <p>แยกภาพ base64 จากไฟล์ cards.json (ไม่ต้องใช้ live server)</p>
+        
+        <div class="step info">
+            <h3>📁 เลือกไฟล์ cards.json</h3>
+            <div class="file-input" id="fileInput">
+                <p>ลากไฟล์ cards.json มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                <input type="file" id="fileSelector" accept=".json" style="display: none;">
+                <button onclick="document.getElementById('fileSelector').click()">เลือกไฟล์ cards.json</button>
+            </div>
+            <div id="fileInfo"></div>
+        </div>
+        
+        <div class="step">
+            <h3>🔧 การตั้งค่า</h3>
+            <div>
+                <label>โฟลเดอร์เอาต์พุต: </label>
+                <input type="text" id="outputDir" value="./images" style="width: 200px;">
+            </div>
+            <br>
+            <div>
+                <label><input type="checkbox" id="preserveStructure" checked> รักษาโครงสร้าง JSON</label>
+            </div>
+            <div>
+                <label><input type="checkbox" id="generateMapping" checked> สร้างไฟล์ mapping</label>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>🚀 เริ่มแยกภาพ</h3>
+            <button onclick="startExtraction()" id="extractBtn" disabled>เริ่มแยกภาพ</button>
+            
+            <div class="progress" style="display: none;" id="progressContainer">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+            <div id="progressText"></div>
+        </div>
+        
+        <div class="step">
+            <h3>📊 ผลลัพธ์</h3>
+            <div id="results"></div>
+            <div class="download-links" id="downloadLinks" style="display: none;"></div>
+        </div>
+        
+        <div class="step">
+            <h3>📝 Log</h3>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let extractionResult = null;
+        
+        // Simple Base64 Image Extractor (inline implementation)
+        class SimpleImageExtractor {
+            constructor(options = {}) {
+                this.options = {
+                    outputDir: options.outputDir || './images',
+                    preserveStructure: options.preserveStructure !== false,
+                    generateMapping: options.generateMapping !== false,
+                    ...options
+                };
+                this.extractedImages = [];
+                this.mapping = {};
+            }
+            
+            async extractFromJSON(jsonData, options = {}) {
+                const startTime = performance.now();
+                
+                log('🔍 กำลังค้นหาภาพ base64...');
+                
+                // ค้นหาภาพ base64 ใน JSON
+                const images = this.findBase64Images(jsonData);
+                log(`🖼️ พบภาพ base64: ${images.length} ภาพ`);
+                
+                if (images.length === 0) {
+                    throw new Error('ไม่พบภาพ base64 ในไฟล์ JSON');
+                }
+                
+                // แยกภาพทีละภาพ
+                for (let i = 0; i < images.length; i++) {
+                    const imageInfo = images[i];
+                    
+                    try {
+                        await this.extractSingleImage(imageInfo, i + 1);
+                        
+                        // อัปเดต progress
+                        const progress = ((i + 1) / images.length) * 100;
+                        updateProgress(progress, `แยกภาพ: ${i + 1}/${images.length}`);
+                        
+                        // หน่วงเวลาเล็กน้อย
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        
+                    } catch (error) {
+                        log(`⚠️ ไม่สามารถแยกภาพ ${i + 1}: ${error.message}`);
+                    }
+                }
+                
+                // อัปเดต JSON
+                const updatedJSON = this.updateJSONPaths(jsonData);
+                
+                const processingTime = performance.now() - startTime;
+                
+                return {
+                    extractedImages: this.extractedImages,
+                    updatedJSON: updatedJSON,
+                    mapping: this.options.generateMapping ? this.mapping : null,
+                    processingTime: processingTime
+                };
+            }
+            
+            findBase64Images(obj, path = '') {
+                const images = [];
+                
+                if (typeof obj === 'object' && obj !== null) {
+                    if (Array.isArray(obj)) {
+                        obj.forEach((item, index) => {
+                            images.push(...this.findBase64Images(item, `${path}[${index}]`));
+                        });
+                    } else {
+                        for (const [key, value] of Object.entries(obj)) {
+                            if (typeof value === 'string' && value.startsWith('data:image/')) {
+                                // พบภาพ base64
+                                images.push({
+                                    path: `${path}.${key}`,
+                                    key: key,
+                                    base64: value,
+                                    uuid: this.generateUUID(),
+                                    parent: obj
+                                });
+                            } else {
+                                images.push(...this.findBase64Images(value, `${path}.${key}`));
+                            }
+                        }
+                    }
+                }
+                
+                return images;
+            }
+            
+            async extractSingleImage(imageInfo, index) {
+                try {
+                    // แยกข้อมูลจาก base64
+                    const { mimeType, data } = this.parseBase64(imageInfo.base64);
+                    
+                    // สร้างชื่อไฟล์
+                    const extension = this.getExtensionFromMimeType(mimeType);
+                    const filename = `card_${String(index).padStart(3, '0')}.${extension}`;
+                    const filepath = `${this.options.outputDir}/${filename}`;
+                    
+                    // แปลง base64 เป็น blob
+                    const blob = this.base64ToBlob(data, mimeType);
+                    
+                    // เก็บข้อมูลภาพ
+                    const imageData = {
+                        uuid: imageInfo.uuid,
+                        filename: filename,
+                        filepath: filepath,
+                        originalBase64: imageInfo.base64,
+                        mimeType: mimeType,
+                        size: blob.size,
+                        blob: blob
+                    };
+                    
+                    this.extractedImages.push(imageData);
+                    
+                    // อัปเดต mapping
+                    if (this.options.generateMapping) {
+                        this.mapping[imageInfo.uuid] = {
+                            extractedPath: filepath,
+                            originalBase64: imageInfo.base64,
+                            filename: filename,
+                            mimeType: mimeType,
+                            size: blob.size,
+                            extractedAt: new Date().toISOString()
+                        };
+                    }
+                    
+                    // อัปเดต JSON path
+                    imageInfo.parent[imageInfo.key] = filepath;
+                    
+                    log(`✅ แยกภาพ: ${filename} (${(blob.size / 1024).toFixed(1)} KB)`);
+                    
+                } catch (error) {
+                    throw new Error(`ไม่สามารถแยกภาพได้: ${error.message}`);
+                }
+            }
+            
+            updateJSONPaths(jsonData) {
+                // JSON ถูกอัปเดตแล้วใน extractSingleImage
+                return JSON.parse(JSON.stringify(jsonData));
+            }
+            
+            parseBase64(base64String) {
+                const matches = base64String.match(/^data:([^;]+);base64,(.+)$/);
+                if (!matches) {
+                    throw new Error('รูปแบบ base64 ไม่ถูกต้อง');
+                }
+                
+                return {
+                    mimeType: matches[1],
+                    data: matches[2]
+                };
+            }
+            
+            getExtensionFromMimeType(mimeType) {
+                const extensions = {
+                    'image/png': 'png',
+                    'image/jpeg': 'jpg',
+                    'image/jpg': 'jpg',
+                    'image/gif': 'gif',
+                    'image/webp': 'webp',
+                    'image/bmp': 'bmp',
+                    'image/svg+xml': 'svg'
+                };
+                
+                return extensions[mimeType] || 'png';
+            }
+            
+            base64ToBlob(base64Data, mimeType) {
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                return new Blob([byteArray], { type: mimeType });
+            }
+            
+            generateUUID() {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+        }
+        
+        // File handling
+        function setupFileHandling() {
+            const fileInput = document.getElementById('fileInput');
+            const fileSelector = document.getElementById('fileSelector');
+            
+            // Drag and drop
+            fileInput.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileInput.classList.add('dragover');
+            });
+            
+            fileInput.addEventListener('dragleave', () => {
+                fileInput.classList.remove('dragover');
+            });
+            
+            fileInput.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileInput.classList.remove('dragover');
+                handleFileSelect(e.dataTransfer.files[0]);
+            });
+            
+            // File selector
+            fileSelector.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+        }
+        
+        async function handleFileSelect(file) {
+            if (!file || !file.name.endsWith('.json')) {
+                alert('กรุณาเลือกไฟล์ JSON');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            log(`📁 เลือกไฟล์: ${file.name}`);
+            log(`📏 ขนาดไฟล์: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+            
+            document.getElementById('fileInfo').innerHTML = `
+                <div class="success">
+                    <strong>✅ เลือกไฟล์แล้ว:</strong> ${file.name}<br>
+                    <strong>ขนาด:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                    <strong>สถานะ:</strong> พร้อมแยกภาพ
+                </div>
+            `;
+            
+            document.getElementById('extractBtn').disabled = false;
+            
+            // วิเคราะห์ไฟล์เบื้องต้น
+            try {
+                log('🔍 กำลังวิเคราะห์ไฟล์...');
+                const preview = await readFilePreview(file, 1024 * 1024); // อ่าน 1MB แรก
+                const imageCount = (preview.match(/data:image\//g) || []).length;
+                
+                if (imageCount > 0) {
+                    log(`🖼️ พบภาพ base64 อย่างน้อย ${imageCount} ภาพ (จากการสแกนเบื้องต้น)`);
+                } else {
+                    log('⚠️ ไม่พบภาพ base64 ในส่วนแรกของไฟล์');
+                }
+            } catch (error) {
+                log(`⚠️ ไม่สามารถวิเคราะห์ไฟล์เบื้องต้นได้: ${error.message}`);
+            }
+        }
+        
+        async function startExtraction() {
+            if (!selectedFile) {
+                alert('กรุณาเลือกไฟล์ก่อน');
+                return;
+            }
+            
+            try {
+                log('🚀 เริ่มกระบวนการแยกภาพ...');
+                
+                // สร้าง extractor
+                const extractor = new SimpleImageExtractor({
+                    outputDir: document.getElementById('outputDir').value,
+                    preserveStructure: document.getElementById('preserveStructure').checked,
+                    generateMapping: document.getElementById('generateMapping').checked
+                });
+                
+                // แสดง progress bar
+                document.getElementById('progressContainer').style.display = 'block';
+                document.getElementById('extractBtn').disabled = true;
+                
+                // อ่านไฟล์และแยกภาพ
+                log('📖 กำลังอ่านไฟล์ JSON...');
+                const jsonText = await readFileAsText(selectedFile);
+                
+                log('🔍 กำลังแปลง JSON...');
+                const jsonData = JSON.parse(jsonText);
+                
+                log('🔄 เริ่มแยกภาพ...');
+                extractionResult = await extractor.extractFromJSON(jsonData, {
+                    filename: selectedFile.name.replace('.json', '')
+                });
+                
+                updateProgress(100, 'เสร็จสิ้น!');
+                
+                // แสดงผลลัพธ์
+                displayResults(extractionResult);
+                
+                // สร้างลิงก์ดาวน์โหลด
+                createDownloadLinks(extractionResult);
+                
+                log('✅ แยกภาพเสร็จสิ้น!');
+                
+            } catch (error) {
+                log(`❌ เกิดข้อผิดพลาด: ${error.message}`);
+                document.getElementById('extractBtn').disabled = false;
+                
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        <strong>❌ เกิดข้อผิดพลาด:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function displayResults(result) {
+            const totalSize = result.extractedImages.reduce((sum, img) => sum + (img.size || 0), 0);
+            const avgSize = totalSize / result.extractedImages.length;
+            
+            document.getElementById('results').innerHTML = `
+                <div class="success">
+                    <h4>✅ แยกภาพสำเร็จ!</h4>
+                    
+                    <p><strong>📊 สถิติ:</strong></p>
+                    <ul>
+                        <li>ภาพที่แยกได้: ${result.extractedImages.length} ภาพ</li>
+                        <li>ขนาดรวม: ${(totalSize / 1024 / 1024).toFixed(2)} MB</li>
+                        <li>ขนาดเฉลี่ย: ${(avgSize / 1024).toFixed(2)} KB ต่อภาพ</li>
+                        <li>เวลาที่ใช้: ${result.processingTime.toFixed(0)}ms</li>
+                    </ul>
+                    
+                    <p><strong>📁 ไฟล์ที่จะได้:</strong></p>
+                    <ul>
+                        <li>JSON ที่อัปเดต: ชี้ไปยัง file paths แทน base64</li>
+                        ${result.mapping ? '<li>ไฟล์ mapping: uuid-mapping.json</li>' : ''}
+                        <li>ภาพทั้งหมด: ${result.extractedImages.length} ไฟล์</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function createDownloadLinks(result) {
+            const downloadContainer = document.getElementById('downloadLinks');
+            
+            // สร้างลิงก์ดาวน์โหลด JSON
+            const jsonBlob = new Blob([JSON.stringify(result.updatedJSON, null, 2)], {
+                type: 'application/json'
+            });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            
+            // สร้างลิงก์ดาวน์โหลด mapping (ถ้ามี)
+            let mappingUrl = null;
+            if (result.mapping) {
+                const mappingBlob = new Blob([JSON.stringify(result.mapping, null, 2)], {
+                    type: 'application/json'
+                });
+                mappingUrl = URL.createObjectURL(mappingBlob);
+            }
+            
+            downloadContainer.innerHTML = `
+                <h4>📥 ดาวน์โหลดไฟล์:</h4>
+                <a href="${jsonUrl}" download="cards_updated.json">📄 ดาวน์โหลด JSON ที่อัปเดต</a>
+                ${mappingUrl ? `<a href="${mappingUrl}" download="uuid-mapping.json">🗺️ ดาวน์โหลด Mapping</a>` : ''}
+                <button onclick="downloadAllImages()">🖼️ ดาวน์โหลดภาพทั้งหมด</button>
+            `;
+            
+            downloadContainer.style.display = 'block';
+        }
+        
+        function downloadAllImages() {
+            if (!extractionResult || !extractionResult.extractedImages) {
+                alert('ไม่มีภาพให้ดาวน์โหลด');
+                return;
+            }
+            
+            log('📥 เริ่มดาวน์โหลดภาพทั้งหมด...');
+            
+            extractionResult.extractedImages.forEach((imageData, index) => {
+                setTimeout(() => {
+                    const url = URL.createObjectURL(imageData.blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = imageData.filename;
+                    link.click();
+                    
+                    // ล้าง URL หลังใช้งาน
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    
+                    log(`📥 ดาวน์โหลด: ${imageData.filename}`);
+                }, index * 200); // หน่วงเวลา 200ms ระหว่างการดาวน์โหลด
+            });
+            
+            log(`✅ เริ่มดาวน์โหลด ${extractionResult.extractedImages.length} ไฟล์`);
+        }
+        
+        // Helper functions
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+                reader.readAsText(file);
+            });
+        }
+        
+        function readFilePreview(file, maxBytes) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+                
+                const blob = file.slice(0, maxBytes);
+                reader.readAsText(blob);
+            });
+        }
+        
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+        
+        function log(message) {
+            const logContainer = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logContainer.textContent += `[${timestamp}] ${message}\n`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupFileHandling();
+            log('🚀 Cards.json Image Extractor พร้อมใช้งาน (Simple Version)');
+            log('📁 กรุณาเลือกไฟล์ cards.json เพื่อเริ่มต้น');
+            log('ℹ️ เวอร์ชันนี้ไม่ต้องใช้ live server');
+        });
+    </script>
+</body>
+</html>

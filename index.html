@@ -2,17 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cyber Holo Orbit</title>
     <style>
-      html, body {
+      html,
+      body {
         margin: 0;
         padding: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background:
-          radial-gradient(circle at center, rgba(0,0,0,0.1) 50%, rgba(5,0,20,1) 100%),
-          url('./image/bg.png') no-repeat center center / cover;
+        background: radial-gradient(
+            circle at center,
+            rgba(0, 0, 0, 0.1) 50%,
+            rgba(5, 0, 20, 1) 100%
+          ),
+          url("./images/bg.png") no-repeat center center / cover;
         background-color: #050010;
       }
 
@@ -39,8 +44,12 @@
 
       /* เอฟเฟกต์พัลส์เรืองแสง */
       @keyframes glowPulse {
-        0% { opacity: 0.2; }
-        100% { opacity: 0.5; }
+        0% {
+          opacity: 0.2;
+        }
+        100% {
+          opacity: 0.5;
+        }
       }
 
       #edgeOverlay rect {
@@ -61,8 +70,51 @@
       }
 
       @keyframes rotate {
-        from { transform: translate(-50%, -50%) rotate(0deg); }
-        to { transform: translate(-50%, -50%) rotate(360deg); }
+        from {
+          transform: translate(-50%, -50%) rotate(0deg);
+        }
+        to {
+          transform: translate(-50%, -50%) rotate(360deg);
+        }
+      }
+
+      /* 🎮 Cube Controls */
+      .cube-controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(26, 26, 46, 0.9);
+        color: #00ffff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #00ffff;
+        font-size: 14px;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+      }
+
+      .cube-controls h4 {
+        margin: 0 0 10px 0;
+        color: #ffffff;
+        text-align: center;
+      }
+
+      .cube-controls button {
+        background: #00ffff;
+        color: #1a1a2e;
+        border: none;
+        padding: 8px 12px;
+        margin: 2px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        transition: all 0.3s ease;
+      }
+
+      .cube-controls button:hover {
+        background: #0080ff;
+        transform: scale(1.05);
       }
     </style>
   </head>
@@ -70,8 +122,24 @@
     <!-- 🌐 Three.js Canvas -->
     <canvas id="threeCanvas"></canvas>
 
+    <!-- 🎮 Cube Controls -->
+    <div class="cube-controls">
+      <h4>🌐 3D Web Cube</h4>
+      <button type="button" onclick="window.iframeCube?.rotateTo(0)">
+        GOONEE
+      </button>
+      <button type="button" onclick="window.iframeCube?.rotateTo(1)">
+        GOORUM
+      </button>
+      <br />
+      <button type="button" onclick="window.iframeCube?.rotateTo(2)">
+        PAYSTOP
+      </button>
+      <button type="button" onclick="window.iframeCube?.rotateTo(3)">
+        GOOMETA
+      </button>
+    </div>
 
     <script type="module" src="./src/main.js"></script>
-
   </body>
 </html>

@@ -2,6 +2,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ObjectLoader, Raycaster, Vector2 } from "three";
+import { CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
+import { WorkingIframeCube } from './WorkingIframeCube.js';
 
 // -------------------- SCENE / CAMERA / RENDERER --------------------
 const scene = new THREE.Scene();
@@ -13,19 +15,28 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(0, 0, 6);
 
-// Prefer using the existing canvas in `index.html` if present. This avoids a second canvas
-// being appended which can cause layering/visibility issues when an overlay is used.
+// -------------------- RENDERERS --------------------
+// WebGL Renderer สำหรับ 3D objects ปกติ
 const existingCanvas = document.getElementById('threeCanvas');
 const renderer = new THREE.WebGLRenderer({ canvas: existingCanvas || undefined, antialias: true, alpha: true });
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 0);
 if (!existingCanvas) {
-  // only append when there is no canvas in the DOM
   document.body.appendChild(renderer.domElement);
 } else {
   console.debug('Using existing canvas#threeCanvas for renderer');
 }
+
+// CSS3D Renderer สำหรับ iframe cube
+const css3dRenderer = new CSS3DRenderer();
+css3dRenderer.setSize(window.innerWidth, window.innerHeight);
+css3dRenderer.domElement.style.position = 'absolute';
+css3dRenderer.domElement.style.top = '0';
+css3dRenderer.domElement.style.left = '0';
+css3dRenderer.domElement.style.pointerEvents = 'none';
+css3dRenderer.domElement.style.zIndex = '10';
+document.body.appendChild(css3dRenderer.domElement);
 
 // -------------------- OBJECTS --------------------
 // ตัวอย่าง: background sphere
@@ -55,14 +66,33 @@ const pointer = new Vector2();       // for raycasting
 const raycaster = new Raycaster();   // for raycasting
 let hoveredCard = null;              // current hovered sprite
 
+// -------------------- WORKING IFRAME CUBE --------------------
+const iframeCube = new WorkingIframeCube({
+  size: 400,
+  position: { x: 600, y: 0, z: 0 },
+  websites: [
+    'https://goonee.netlify.app/',
+    'https://goorum.netlify.app/', 
+    'https://gooneepaystop.netlify.app/',
+    'https://goometa.figma.site/'
+  ]
+});
+
+// เพิ่ม WebGL parts เข้า main scene
+scene.add(iframeCube.getWebGLScene());
+
+// เพิ่ม global reference สำหรับ controls
+window.iframeCube = iframeCube;
+
 // -------------------- FETCH CARDS (3D JSON) --------------------
 // Try a few likely locations for `cards.json` and give helpful console output so it's
 // easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
 async function loadCards() {
   const tryPaths = [
-    './cards.json',         // colocated with index.html
-    './public/cards.json',  // common dev layout where 'public' folder holds assets
-    '/public/cards.json'
+    '/cards.json',          // Vite serves public files at root
+    './cards.json',         // fallback
+    './file/cards_updated.json', // alternative location
+    './public/cards.json'   // last resort
   ];
 
   let lastErr = null;
@@ -107,10 +137,15 @@ loadCards();
 function animate() {
   requestAnimationFrame(animate);
 
+  // อัปเดต iframe cube
+  iframeCube.update();
+
   // If you later add editor-driven animation, make sure it doesn't overwrite authored positions here.
   controls.update();
-  renderer.clear();
+  
+  // Render ทั้ง WebGL และ CSS3D
   renderer.render(scene, camera);
+  css3dRenderer.render(iframeCube.getCSS3DScene(), camera);
 }
 animate();
 
@@ -119,6 +154,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  css3dRenderer.setSize(window.innerWidth, window.innerHeight);
 }, { passive: true });
 
 // -------------------- INTERACTION / HOVER --------------------
@@ -153,12 +189,16 @@ function onMouseMove(event) {
 }
 window.addEventListener("mousemove", onMouseMove, { passive: true });
 
+
+
 // -------------------- OPTIONAL: Click / Pointer handlers (example) --------------------
 function onClick(event) {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
+  
+  // ตรวจสอบ cards เท่านั้น (ไม่มี iframe cube แล้ว)
   const intersects = raycaster.intersectObjects(cards, true); // recursive
 
   if (intersects.length > 0) {
