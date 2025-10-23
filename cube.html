@@ -1,204 +1,230 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Web Portal - Goolaxy</title>
-    <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: radial-gradient(
-            circle at center,
-            rgba(0, 0, 0, 0.1) 50%,
-            rgba(5, 0, 20, 1) 100%
-          ),
-          linear-gradient(45deg, #1a1a2e, #16213e, #0f3460);
-        background-color: #050010;
-      }
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Cube with 6 Video Faces</title>
+  <style>
+    :root {
+      --size: 300px;       /* ขนาดด้านของลูกบาศก์ */
+      --gap: 0px;          /* เว้นขอบหน้า */
+      --bg: #0e1116;       /* สีพื้นหลัง */
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: #cbd5e1;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      overflow: hidden;
+    }
+    .stage {
+      width: 100vw;
+      height: 100vh;
+      display: grid;
+      place-items: center;
+      perspective: 1000px;           /* สร้างมุมมอง 3D */
+      perspective-origin: 50% 50%;
+    }
+    .cube-wrap {
+      width: var(--size);
+      height: var(--size);
+      position: relative;
+      transform-style: preserve-3d;  /* ทำให้ลูกบาศก์เป็น 3D จริงๆ */
+      animation: spin 18s linear infinite;
+      cursor: grab;
+      will-change: transform;
+      /* เงาเบาๆ ให้ดูมีมิติ */
+      filter: drop-shadow(0 40px 100px rgba(0,0,0,0.35));
+    }
+    .cube-wrap:active { cursor: grabbing; }
+    @keyframes spin {
+      0%   { transform: rotateX(-12deg) rotateY(0deg); }
+      100% { transform: rotateX(-12deg) rotateY(360deg); }
+    }
 
-      canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-        pointer-events: auto;
-        touch-action: none;
-      }
+    .face {
+      position: absolute;
+      width: calc(var(--size) - var(--gap) * 2);
+      height: calc(var(--size) - var(--gap) * 2);
+      left: var(--gap);
+      top: var(--gap);
+      display: block;
+      overflow: hidden;
+      border-radius: 12px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.09),
+        0 0 32px rgba(0,0,0,0.35);
+      background: #111; /* กันจอว่าง */
+      transform-style: preserve-3d;
+    }
 
-      /* 🎮 Cube Controls */
-      .cube-controls {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: rgba(26, 26, 46, 0.9);
-        color: #00ffff;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #00ffff;
-        font-size: 14px;
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        pointer-events: auto;
-        user-select: none;
-      }
+    /* ตำแหน่ง 6 หน้าใน 3D space */
+    .face--front  { transform: translateZ(calc(var(--size) / 2)); }
+    .face--back   { transform: rotateY(180deg) translateZ(calc(var(--size) / 2)); }
+    .face--right  { transform: rotateY(90deg)  translateZ(calc(var(--size) / 2)); }
+    .face--left   { transform: rotateY(-90deg) translateZ(calc(var(--size) / 2)); }
+    .face--top    { transform: rotateX(90deg)  translateZ(calc(var(--size) / 2)); }
+    .face--bottom { transform: rotateX(-90deg) translateZ(calc(var(--size) / 2)); }
 
-      .cube-controls h4 {
-        margin: 0 0 10px 0;
-        color: #ffffff;
-        text-align: center;
-      }
+    /* วิดีโอเติมเต็มหน้าอย่างสวยงาม */
+    .face > video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;         /* ครอบเต็มหน้า */
+      display: block;
+      transform: translateZ(0);  /* ป้องกัน glitch บางเบราว์เซอร์ */
+    }
 
-      .cube-controls button {
-        background: #00ffff;
-        color: #1a1a2e;
-        border: none;
-        padding: 8px 12px;
-        margin: 2px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 12px;
-        transition: all 0.3s ease;
-      }
+    /* ป้ายบอกหน้า (เปิด/ปิดได้) */
+    .label {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      letter-spacing: .02em;
+      background: rgba(0,0,0,0.5);
+      color: #e5e7eb;
+      border-radius: 8px;
+      backdrop-filter: blur(6px);
+      pointer-events: none;
+    }
 
-      .cube-controls button:hover {
-        background: #0080ff;
-        transform: scale(1.05);
-      }
+    /* UI ขนาดและหยุดหมุน */
+    .ui {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(0,0,0,0.35);
+      padding: 10px 12px;
+      border-radius: 12px;
+      backdrop-filter: blur(6px);
+    }
+    .ui input[type="range"] { width: 160px; }
+    .ui button {
+      appearance: none;
+      background: #1f2937;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .ui button:hover { background: #111827; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="cube-wrap" id="cube">
+      <!-- FRONT -->
+      <section class="face face--front">
+        <video src="front.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Front</span>
+      </section>
 
-      /* Navigation */
-      .nav-button {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        background: rgba(26, 26, 46, 0.9);
-        color: #00ffff;
-        padding: 15px 20px;
-        border: 2px solid #00ffff;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-block;
-        pointer-events: auto;
-        user-select: none;
-      }
+      <!-- BACK -->
+      <section class="face face--back">
+        <video src="back.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Back</span>
+      </section>
 
-      .nav-button:hover {
-        background: #00ffff;
-        color: #1a1a2e;
-        transform: scale(1.05);
-      }
+      <!-- RIGHT -->
+      <section class="face face--right">
+        <video src="right.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Right</span>
+      </section>
 
-      /* Info Panel */
-      .info-panel {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: rgba(26, 26, 46, 0.9);
-        color: #00ffff;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #00ffff;
-        font-size: 14px;
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        max-width: 300px;
-        pointer-events: auto;
-        user-select: none;
-      }
+      <!-- LEFT -->
+      <section class="face face--left">
+        <video src="left.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Left</span>
+      </section>
 
-      .info-panel h4 {
-        margin: 0 0 10px 0;
-        color: #ffffff;
-        text-align: center;
-      }
+      <!-- TOP -->
+      <section class="face face--top">
+        <video src="top.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Top</span>
+      </section>
 
-      .info-panel ul {
-        margin: 0;
-        padding-left: 20px;
-      }
-
-      .info-panel li {
-        margin: 5px 0;
-      }
-
-      /* 🚀 Enhanced iframe performance and touch handling */
-      iframe {
-        pointer-events: auto !important;
-        touch-action: manipulation !important;
-        will-change: transform !important;
-        transform: translateZ(0) !important;
-        backface-visibility: hidden !important;
-        -webkit-backface-visibility: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        scroll-behavior: smooth !important;
-
-        /* Prevent selection and context menu interference */
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-
-        /* Optimize rendering */
-        image-rendering: optimizeSpeed;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: optimize-contrast;
-
-        /* Smooth transitions */
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-
-      /* 📱 Mobile-specific optimizations */
-      @media (max-width: 768px) {
-        iframe {
-          touch-action: pan-x pan-y pinch-zoom !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <!-- 🌐 Three.js Canvas -->
-    <canvas id="threeCanvas"></canvas>
-
-    <!-- 🧭 Navigation -->
-    <a href="./index.html" class="nav-button">🎴 Go to Goolaxy Cards</a>
-
-    <!-- 📋 Info Panel -->
-    <div class="info-panel">
-      <h4>🌐 3D Web Portal</h4>
-      <ul>
-        <li>🖱️ Drag to rotate view</li>
-        <li>🔄 Auto-rotating cube</li>
-        <li>🌐 Live websites on faces</li>
-        <li>⚡ Click to interact</li>
-      </ul>
+      <!-- BOTTOM -->
+      <section class="face face--bottom">
+        <video src="bottom.mp4" muted autoplay loop playsinline></video>
+        <span class="label">Bottom</span>
+      </section>
     </div>
+  </div>
 
-    <!-- 🎮 Cube Controls -->
-    <div class="cube-controls">
-      <h4>🌐 Navigate Websites</h4>
-      <button type="button" onclick="window.rotateTo(0)">GOONEE</button>
-      <button type="button" onclick="window.rotateTo(1)">SHARKKADAW</button>
-      <br />
-      <button type="button" onclick="window.rotateTo(2)">GOONEE LAB</button>
-      <button type="button" onclick="window.rotateTo(3)">GOOMETA</button>
-    </div>
+  <!-- UI -->
+  <div class="ui">
+    <label style="color:#e5e7eb;font-size:13px;">ขนาด:</label>
+    <input id="sizeRange" type="range" min="180" max="520" value="300" />
+    <button id="toggleSpin">หยุด/เล่นหมุน</button>
+  </div>
 
-    <script type="module" src="./src/cube-main.js"></script>
-  </body>
+  <script>
+    // หมุนด้วยเมาส์/นิ้ว
+    const cube = document.getElementById('cube');
+    let spinning = true;
+    let isPointerDown = false;
+    let startX = 0, startY = 0;
+    let rotX = -12, rotY = 0;
+
+    const applyTransform = () => {
+      cube.style.animation = spinning ? 'spin 18s linear infinite' : 'none';
+      cube.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    };
+
+    const onPointerDown = (e) => {
+      isPointerDown = true;
+      spinning = false;
+      startX = e.clientX || (e.touches && e.touches[0].clientX);
+      startY = e.clientY || (e.touches && e.touches[0].clientY);
+      applyTransform();
+    };
+    const onPointerMove = (e) => {
+      if (!isPointerDown) return;
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
+      const dx = x - startX;
+      const dy = y - startY;
+      startX = x; startY = y;
+      rotY += dx * 0.4;     // หมุนแกน Y
+      rotX -= dy * 0.4;     // หมุนแกน X
+      applyTransform();
+    };
+    const onPointerUp = () => { isPointerDown = false; };
+
+    cube.addEventListener('mousedown', onPointerDown);
+    cube.addEventListener('touchstart', onPointerDown, { passive: true });
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('touchmove', onPointerMove, { passive: true });
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchend', onPointerUp);
+
+    // ปุ่มหยุด/เล่นหมุน
+    document.getElementById('toggleSpin').addEventListener('click', () => {
+      spinning = !spinning;
+      applyTransform();
+    });
+
+    // ปรับขนาดลูกบาศก์แบบเรียลไทม์
+    const sizeRange = document.getElementById('sizeRange');
+    sizeRange.addEventListener('input', (e) => {
+      const size = e.target.value + 'px';
+      document.documentElement.style.setProperty('--size', size);
+    });
+
+    // บังคับเล่นอัตโนมัติบน iOS/มือถือ (ต้อง muted + playsinline)
+    document.querySelectorAll('video').forEach(v => {
+      const playSilently = () => v.play().catch(() => {});
+      v.addEventListener('canplay', playSilently, { once: true });
+      // ถ้าท่านต้องการเสียง ให้เอา muted ออก แต่ผู้ใช้ต้องกดเล่นเอง
+    });
+  </script>
+</body>
 </html>
