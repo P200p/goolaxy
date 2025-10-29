@@ -73,34 +73,46 @@
 
     /* ---- cube styles (new) ---- */
     :root {
-      --face-w: 360px;
-      --face-h: 210px;
+      /* make faces physically large */
+      --face-w: 960px;
+      --face-h: 540px;
+      /* face spacing (used for translateZ on faces) */
       --cube-translate: calc(var(--face-w) / 2);
+      /* how far to push the whole cube away (negative Z -> away from camera) */
+      --cube-distance: -900px;
     }
 
-    /* stage centers cube and provides perspective */
+    /* stage positions the cube within the scene but we keep it pointer-events enabled
+       so users can interact; place it off-center so players must move toward it */
     .cube-stage {
       position: fixed;
-      left: 20px;
-      top: 20px;
-      width: calc(var(--face-w) + 40px);
-      height: calc(var(--face-h) + 40px);
+      left: 50%;
+      top: 10%;
+      width: calc(var(--face-w) + 80px);
+      height: calc(var(--face-h) + 80px);
       display: flex;
       align-items: center;
       justify-content: center;
-      perspective: 1200px;
-      z-index: 900;
+      perspective: 1400px;
+      z-index: 850;
       pointer-events: auto;
+      transform: translateX(-50%);
+      /* optional faint hint outline */
+      -webkit-tap-highlight-color: transparent;
     }
 
+    /* wrap: we translate the whole cube away so it appears smaller/remote,
+       while keeping face sizes large so when user approaches it becomes prominent */
     .cube-wrap {
       width: var(--face-w);
       height: var(--face-h);
       transform-style: preserve-3d;
-      transform: rotateX(-12deg) rotateY(22deg);
+      /* translateZ moves entire cube along Z axis; negative pushes away */
+      transform: translateZ(var(--cube-distance)) rotateX(-12deg) rotateY(22deg);
       transition: transform 420ms cubic-bezier(.2,.9,.2,1);
       position: relative;
       will-change: transform;
+      pointer-events: auto;
     }
 
     .cube-face {
@@ -117,24 +129,24 @@
       color: #fff;
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));
       border: 1px solid rgba(255,255,255,0.04);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.6);
       box-sizing: border-box;
       transform: translate(-50%, -50%);
       overflow: hidden;
       font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-      font-size: 14px;
+      font-size: 16px;
     }
 
-    /* visible debugging outline (remove or lower opacity when happy) */
+    /* subtle visual frame so dev/test can see where cube is (lower opacity for production) */
     .cube-face::after {
       content: "";
       position: absolute;
       inset: 0;
-      border: 1px dashed rgba(255,255,255,0.03);
+      border: 1px dashed rgba(255,255,255,0.02);
       pointer-events: none;
     }
 
-    /* explicit transforms for 6 faces */
+    /* explicit transforms for 6 faces (use large translateZ matching face width) */
     .face-front  { transform: translate(-50%, -50%) translateZ(var(--cube-translate)); }
     .face-back   { transform: translate(-50%, -50%) rotateY(180deg) translateZ(var(--cube-translate)); }
     .face-right  { transform: translate(-50%, -50%) rotateY(90deg) translateZ(var(--cube-translate)); }
@@ -152,14 +164,14 @@
       background: rgba(0,0,0,0.25);
       color: #cbd5e1;
       text-align: center;
-      padding: 8px;
+      padding: 12px;
     }
 
-    /* interactions */
+    /* small UI controls overlay (kept minimal) */
     .cube-controls {
       position: absolute;
-      right: -10px;
-      top: -10px;
+      right: -14px;
+      top: -14px;
       display: flex;
       gap: 8px;
       z-index: 1100;
@@ -173,14 +185,17 @@
       cursor: pointer;
     }
 
-    /* responsive */
+    /* responsive: keep the cube distance proportional on small screens */
+    @media (max-width: 1200px) {
+      :root { --cube-distance: -700px; }
+    }
     @media (max-width: 900px) {
-      :root { --face-w: 260px; --face-h: 150px; --cube-translate: calc(var(--face-w) / 2); }
-      .cube-stage { left: 12px; top: 12px; }
+      :root { --face-w: 560px; --face-h: 315px; --cube-translate: calc(var(--face-w) / 2); --cube-distance: -600px; }
+      .cube-stage { top: 6%; }
     }
     @media (max-width: 420px) {
-      :root { --face-w: 200px; --face-h: 120px; --cube-translate: calc(var(--face-w) / 2); }
-      .cube-stage { left: 10px; top: 10px; }
+      :root { --face-w: 360px; --face-h: 202px; --cube-translate: calc(var(--face-w) / 2); --cube-distance: -420px; }
+      .cube-stage { top: 4%; left: 50%; transform: translateX(-50%); width: calc(var(--face-w) + 40px); height: calc(var(--face-h) + 40px); }
     }
   </style>
 </head>
@@ -192,25 +207,25 @@
   <a href="./cube.html" class="nav-button">🌐 3D Web Portal</a>
 
   <!-- ---- cube markup (new) ---- -->
-  <div class="cube-stage" aria-hidden="false" title="Cube preview">
-    <div class="cube-wrap" id="cubeWrap" role="application" aria-label="3D cube preview">
+  <div class="cube-stage" aria-hidden="false" title="Distant ad cube">
+    <div class="cube-wrap" id="cubeWrap" role="application" aria-label="Distant big cube ad">
       <div class="cube-face face-front" data-face="front">
-        <div class="face-content">Front</div>
+        <div class="face-content">Ad: Front</div>
       </div>
       <div class="cube-face face-back" data-face="back">
-        <div class="face-content">Back</div>
+        <div class="face-content">Ad: Back</div>
       </div>
       <div class="cube-face face-right" data-face="right">
-        <div class="face-content">Right</div>
+        <div class="face-content">Ad: Right</div>
       </div>
       <div class="cube-face face-left" data-face="left">
-        <div class="face-content">Left</div>
+        <div class="face-content">Ad: Left</div>
       </div>
       <div class="cube-face face-top" data-face="top">
-        <div class="face-content">Top</div>
+        <div class="face-content">Ad: Top</div>
       </div>
       <div class="cube-face face-bottom" data-face="bottom">
-        <div class="face-content">Bottom</div>
+        <div class="face-content">Ad: Bottom</div>
       </div>
     </div>
 
@@ -229,9 +244,9 @@
     (function(){
       const cube = document.getElementById('cubeWrap');
       if (!cube) return;
-      // initial rotation
+      // initial rotation and a small zoom-in on hover behavior
       let rx = -12, ry = 22;
-      function apply() { cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`; }
+      function apply() { cube.style.transform = `translateZ(var(--cube-distance)) rotateX(${rx}deg) rotateY(${ry}deg)`; }
       apply();
 
       // simple drag to rotate
@@ -245,12 +260,22 @@
         if (!dragging) return;
         const dx = e.clientX - lastX, dy = e.clientY - lastY;
         lastX = e.clientX; lastY = e.clientY;
-        ry += dx * 0.3;
-        rx -= dy * 0.25;
+        ry += dx * 0.22;
+        rx -= dy * 0.18;
         rx = Math.max(-90, Math.min(90, rx));
         apply();
       });
       window.addEventListener('pointerup', () => { dragging = false; });
+
+      // small hover zoom to hint interactivity (scale cube slightly when pointer is over stage)
+      const stage = document.querySelector('.cube-stage');
+      stage.addEventListener('pointerenter', () => {
+        cube.style.transition = 'transform 320ms cubic-bezier(.2,.9,.2,1)';
+        cube.style.transform = `translateZ(calc(var(--cube-distance) + 120px)) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      });
+      stage.addEventListener('pointerleave', () => {
+        cube.style.transform = `translateZ(var(--cube-distance)) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      });
 
       // auto rotate toggle
       let auto = false, rafId = 0;
