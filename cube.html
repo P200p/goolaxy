@@ -1,509 +1,281 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Cube with 6 Video Faces</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Holo Orbit</title>
   <style>
-    :root {
-      --size: 300px;       /* ขนาดด้านของลูกบาศก์ */
-      --gap: 0px;          /* เว้นขอบหน้า */
-      --bg: #0e1116;       /* สีพื้นหลัง */
-    }<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Web Portal</title>
-  <style>
-    :root {
-      --face-w: 480px;
-      --face-h: 270px;
-      --gap: 2px;
-    }
-    html,body { height:100%; margin:0; background:#111; color:#fff; font-family:system-ui,Segoe UI,Roboto; }
-    .stage {
-      width:100%;
-      height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      perspective:1200px;
-      -webkit-perspective:1200px;
-      overflow:hidden;
-      position:relative;
-    }
-    .cube-wrap {
-      width: calc(var(--face-w) );
-      height: calc(var(--face-h) );
-      transform-style: preserve-3d;
-      transition: transform 600ms cubic-bezier(.2,.9,.2,1);
-      will-change: transform;
-    }
-    .cube-face {
-      position:absolute;
-      width:var(--face-w);
-      height:var(--face-h);
-      box-shadow:0 6px 20px rgba(0,0,0,.6);
-      border:1px solid rgba(255,255,255,.06);
-      overflow:hidden;
-      background:#000;
-      backface-visibility:hidden;
-    }
-    .cube-face iframe {
-      width:100%;
-      height:100%;
-      border:0;
-      display:block;
-    }
-    /* face transforms: front, back, right, left, top, bottom */
-    .face-front  { transform: translateZ(calc(var(--face-w) / 2)); }
-    .face-back   { transform: rotateY(180deg) translateZ(calc(var(--face-w) / 2)); }
-    .face-right  { transform: rotateY(90deg) translateZ(calc(var(--face-w) / 2)); transform-origin:center; }
-    .face-left   { transform: rotateY(-90deg) translateZ(calc(var(--face-w) / 2)); transform-origin:center; }
-    .face-top    { width:var(--face-w); height:var(--face-h); transform: rotateX(90deg) translateZ(calc(var(--face-h) / 2)); transform-origin:center; }
-    .face-bottom { width:var(--face-w); height:var(--face-h); transform: rotateX(-90deg) translateZ(calc(var(--face-h) / 2)); transform-origin:center; }
-
-    /* simple UI */
-    .controls {
-      position: absolute;
-      right:16px;
-      top:16px;
-      display:flex;
-      gap:8px;
-      z-index:30;
-    }
-    .controls button {
-      background:rgba(255,255,255,.06);
-      color:#fff;
-      border:1px solid rgba(255,255,255,.06);
-      padding:8px 12px;
-      border-radius:6px;
-      cursor:pointer;
-      backdrop-filter: blur(6px);
-    }
-    .back-link {
-      position:absolute;
-      left:16px;
-      top:16px;
-      z-index:30;
-    }
-    .back-link a {
-      display:inline-block;
-      padding:8px 12px;
-      background:rgba(0,0,0,.5);
-      border:1px solid rgba(255,255,255,.06);
-      color:#fff;
-      text-decoration:none;
-      border-radius:6px;
-    }
-    @media (max-width:900px) {
-      :root { --face-w: 320px; --face-h: 180px; }
-    }
-    @media (max-width:420px) {
-      :root { --face-w: 260px; --face-h: 150px; }
-    }
-  </style>
-</head>
-<body>
-  <div id="cube" class="cube-wrap" aria-hidden="false">
-  <div class="cube-face face-front" data-face="front" data-src="./pages/single.html"><div class="placeholder">Front</div></div>
-  <div class="cube-face face-back"  data-face="back"  data-src="./pages/single.html"><div class="placeholder">Back</div></div>
-  <div class="cube-face face-right" data-face="right" data-src="./pages/single.html"><div class="placeholder">Right</div></div>
-  <div class="cube-face face-left"  data-face="left"  data-src="./pages/single.html"><div class="placeholder">Left</div></div>
-  <div class="cube-face face-top"   data-face="top"   data-src="./pages/single.html"><div class="placeholder">Top</div></div>
-  <div class="cube-face face-bottom"data-face="bottom"data-src="./pages/single.html"><div class="placeholder">Bottom</div></div>
-</div>
-  <div class="stage">
-    <div class="back-link"><a href="./main.html">← กลับ</a></div>
-    <div class="controls">
-      <button id="auto">Toggle Auto Rotate</button>
-      <button id="reset">Reset</button>
-    </div>
-
-    <div id="cube" class="cube-wrap" aria-hidden="false">
-      <div class="cube-face face-front"><iframe src="./pages/front.html" loading="lazy" title="Front"></iframe></div>
-      <div class="cube-face face-back"><iframe src="./pages/back.html" loading="lazy" title="Back"></iframe></div>
-      <div class="cube-face face-right"><iframe src="./pages/right.html" loading="lazy" title="Right"></iframe></div>
-      <div class="cube-face face-left"><iframe src="./pages/left.html" loading="lazy" title="Left"></iframe></div>
-      <div class="cube-face face-top"><iframe src="./pages/top.html" loading="lazy" title="Top"></iframe></div>
-      <div class="cube-face face-bottom"><iframe src="./pages/bottom.html" loading="lazy" title="Bottom"></iframe></div>
-    </div>
-  </div>
-
-  <script type="module">
-    // cube-main.js แบบฝังเพื่อความง่าย ไม่ต้องแยกไฟล์
-    const cube = document.getElementById('cube');
-    let auto = false;
-    let rx = -10;
-    let ry = 30;
-    let rz = 0;
-    let autoId = 0;
-
-    function applyTransform() {
-      cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
-    }
-    applyTransform();
-
-    // mouse drag rotate
-    let dragging = false;
-    let lastX=0, lastY=0;
-    cube.parentElement.addEventListener('pointerdown', (e) => {
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      cube.parentElement.setPointerCapture(e.pointerId);
-    });
-    window.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      ry += dx * 0.3;
-      rx -= dy * 0.25;
-      rx = Math.max(-90, Math.min(90, rx));
-      applyTransform();
-    });
-    window.addEventListener('pointerup', () => { dragging = false; });
-
-    // touch friendly wheel
-    window.addEventListener('wheel', (e) => {
-      ry += e.deltaY * 0.02;
-      applyTransform();
-    }, {passive:true});
-
-    // auto rotate
-    document.getElementById('auto').addEventListener('click', () => {
-      auto = !auto;
-      if (auto) {
-        autoId = requestAnimationFrame(autoRotate);
-        document.getElementById('auto').textContent = 'Stop Auto';
-      } else {
-        cancelAnimationFrame(autoId);
-        document.getElementById('auto').textContent = 'Toggle Auto Rotate';
-      }
-    });
-    function autoRotate() {
-      ry += 0.3;
-      applyTransform();
-      autoId = requestAnimationFrame(autoRotate);
-    }
-
-    // reset
-    document.getElementById('reset').addEventListener('click', () => {
-      rx = -10; ry = 30; rz = 0; applyTransform();
-    });
-
-    // optional: allow clicking an iframe face to focus it by moving cube
-    const faces = Array.from(document.querySelectorAll('.cube-face'));
-    faces.forEach((f, idx) => {
-      f.addEventListener('click', (e) => {
-        // prevent click when dragging
-        if (dragging) return;
-        // simple face focus map
-        switch(idx) {
-          case 0: rx=0; ry=0; break; // front
-          case 1: rx=0; ry=180; break; // back
-          case 2: rx=0; ry=90; break; // right
-          case 3: rx=0; ry=-90; break; // left
-          case 4: rx=90; ry=0; break; // top
-          case 5: rx=-90; ry=0; break; // bottom
-        }
-        applyTransform();
-      });
-    });
-
-    // Accessibility hint: allow keyboard arrows
-    window.addEventListener('keydown', (e) => {
-      const step = 10;
-      if (e.key === 'ArrowLeft') ry -= step;
-      if (e.key === 'ArrowRight') ry += step;
-      if (e.key === 'ArrowUp') rx -= step;
-      if (e.key === 'ArrowDown') rx += step;
-      applyTransform();
-    });
-
-  </script>
-</body>
-</html>
-
+    /* ---- original site styles ---- */
     html, body {
-      height: 100%;
       margin: 0;
-      background: var(--bg);
-      color: #cbd5e1;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-      overflow: hidden;
-    }
-    .stage {
-      width: 100vw;
-      height: 100vh;
-      display: grid;
-      place-items: center;
-      perspective: 1000px;           /* สร้างมุมมอง 3D */
-      perspective-origin: 50% 50%;
-    }
-    .cube-wrap {
-      width: var(--size);
-      height: var(--size);
-      position: relative;
-      transform-style: preserve-3d;  /* ทำให้ลูกบาศก์เป็น 3D จริงๆ */
-      animation: spin 18s linear infinite;
-      cursor: grab;
-      will-change: transform;
-      /* เงาเบาๆ ให้ดูมีมิติ */
-      filter: drop-shadow(0 40px 100px rgba(0,0,0,0.35));
-    }
-    .cube-wrap:active { cursor: grabbing; }
-    @keyframes spin {
-      0%   { transform: rotateX(-12deg) rotateY(0deg); }
-      100% { transform: rotateX(-12deg) rotateY(360deg); }
-    }
-
-    .face {
-      position: absolute;
-      width: calc(var(--size) - var(--gap) * 2);
-      height: calc(var(--size) - var(--gap) * 2);
-      left: var(--gap);
-      top: var(--gap);
-      display: block;
-      overflow: hidden;
-      border-radius: 12px;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.09),
-        0 0 32px rgba(0,0,0,0.35);
-      background: #111; /* กันจอว่าง */
-      transform-style: preserve-3d;
-    }
-
-    /* ตำแหน่ง 6 หน้าใน 3D space */
-    .face--front  { transform: translateZ(calc(var(--size) / 2)); }
-    .face--back   { transform: rotateY(180deg) translateZ(calc(var(--size) / 2)); }
-    .face--right  { transform: rotateY(90deg)  translateZ(calc(var(--size) / 2)); }
-    .face--left   { transform: rotateY(-90deg) translateZ(calc(var(--size) / 2)); }
-    .face--top    { transform: rotateX(90deg)  translateZ(calc(var(--size) / 2)); }
-    .face--bottom { transform: rotateX(-90deg) translateZ(calc(var(--size) / 2)); }
-
-    /* วิดีโอเติมเต็มหน้าอย่างสวยงาม */
-    .face > video {
+      padding: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;         /* ครอบเต็มหน้า */
-      display: block;
-      transform: translateZ(0);  /* ป้องกัน glitch บางเบราว์เซอร์ */
+      overflow: hidden;
+      background: radial-gradient( circle at center, rgba(0, 0, 0, 0.1) 50%, rgba(5, 0, 20, 1) 100% ), url("./images/bg.png") no-repeat center center / cover;
+      background-color: #050010;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    /* SVG Overlay HUD */
+    #edgeOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      mix-blend-mode: screen;
+    }
+    @keyframes glowPulse { 0% { opacity: 0.2; } 100% { opacity: 0.5; } }
+    #edgeOverlay rect { animation: glowPulse 3s infinite alternate; }
+    .center-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 400px;
+      transform: translate(-50%, -50%);
+      animation: rotate 12s linear infinite;
+      opacity: 0.35;
+      z-index: 3;
+    }
+    @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+    /* Navigation button */
+    .nav-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(26, 26, 46, 0.9);
+      color: #00ffff;
+      padding: 15px 20px;
+      border: 2px solid #00ffff;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .nav-button:hover { background: #00ffff; color: #1a1a2e; transform: scale(1.05); }
+
+    /* ---- cube styles (new) ---- */
+    :root {
+      --face-w: 360px;
+      --face-h: 210px;
+      --cube-translate: calc(var(--face-w) / 2);
     }
 
-    /* ป้ายบอกหน้า (เปิด/ปิดได้) */
-    .label {
+    /* stage centers cube and provides perspective */
+    .cube-stage {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      width: calc(var(--face-w) + 40px);
+      height: calc(var(--face-h) + 40px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      perspective: 1200px;
+      z-index: 900;
+      pointer-events: auto;
+    }
+
+    .cube-wrap {
+      width: var(--face-w);
+      height: var(--face-h);
+      transform-style: preserve-3d;
+      transform: rotateX(-12deg) rotateY(22deg);
+      transition: transform 420ms cubic-bezier(.2,.9,.2,1);
+      position: relative;
+      will-change: transform;
+    }
+
+    .cube-face {
       position: absolute;
-      left: 10px;
-      bottom: 10px;
-      padding: 6px 10px;
-      font-size: 12px;
-      letter-spacing: .02em;
-      background: rgba(0,0,0,0.5);
-      color: #e5e7eb;
-      border-radius: 8px;
-      backdrop-filter: blur(6px);
+      left: 50%;
+      top: 50%;
+      width: var(--face-w);
+      height: var(--face-h);
+      transform-origin: center center;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));
+      border: 1px solid rgba(255,255,255,0.04);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      box-sizing: border-box;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+    }
+
+    /* visible debugging outline (remove or lower opacity when happy) */
+    .cube-face::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px dashed rgba(255,255,255,0.03);
       pointer-events: none;
     }
 
-    /* UI ขนาดและหยุดหมุน */
-    .ui {
-      position: fixed;
-      left: 20px;
-      bottom: 20px;
+    /* explicit transforms for 6 faces */
+    .face-front  { transform: translate(-50%, -50%) translateZ(var(--cube-translate)); }
+    .face-back   { transform: translate(-50%, -50%) rotateY(180deg) translateZ(var(--cube-translate)); }
+    .face-right  { transform: translate(-50%, -50%) rotateY(90deg) translateZ(var(--cube-translate)); }
+    .face-left   { transform: translate(-50%, -50%) rotateY(-90deg) translateZ(var(--cube-translate)); }
+    .face-top    { transform: translate(-50%, -50%) rotateX(90deg) translateZ(calc(var(--face-h) / 2)); }
+    .face-bottom { transform: translate(-50%, -50%) rotateX(-90deg) translateZ(calc(var(--face-h) / 2)); }
+
+    /* face content placeholder */
+    .face-content {
+      width: 100%;
+      height: 100%;
       display: flex;
-      gap: 10px;
       align-items: center;
-      background: rgba(0,0,0,0.35);
-      padding: 10px 12px;
-      border-radius: 12px;
-      backdrop-filter: blur(6px);
+      justify-content: center;
+      background: rgba(0,0,0,0.25);
+      color: #cbd5e1;
+      text-align: center;
+      padding: 8px;
     }
-    .ui input[type="range"] { width: 160px; }
-    .ui button {
-      appearance: none;
-      background: #1f2937;
-      color: #e5e7eb;
-      border: 1px solid #374151;
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 13px;
+
+    /* interactions */
+    .cube-controls {
+      position: absolute;
+      right: -10px;
+      top: -10px;
+      display: flex;
+      gap: 8px;
+      z-index: 1100;
+    }
+    .cube-controls button {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
       cursor: pointer;
     }
-    .ui button:hover { background: #111827; }
+
+    /* responsive */
+    @media (max-width: 900px) {
+      :root { --face-w: 260px; --face-h: 150px; --cube-translate: calc(var(--face-w) / 2); }
+      .cube-stage { left: 12px; top: 12px; }
+    }
+    @media (max-width: 420px) {
+      :root { --face-w: 200px; --face-h: 120px; --cube-translate: calc(var(--face-w) / 2); }
+      .cube-stage { left: 10px; top: 10px; }
+    }
   </style>
 </head>
 <body>
-  <div class="stage">
-    <div class="cube-wrap" id="cube">
-      <!-- FRONT -->
-      <section class="face face--front">
-        <video src="front.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Front</span>
-      </section>
+  <!-- Three.js Canvas (original) -->
+  <canvas id="threeCanvas"></canvas>
 
-      <!-- BACK -->
-      <section class="face face--back">
-        <video src="back.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Back</span>
-      </section>
+  <!-- Nav to Cube (original) -->
+  <a href="./cube.html" class="nav-button">🌐 3D Web Portal</a>
 
-      <!-- RIGHT -->
-      <section class="face face--right">
-        <video src="right.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Right</span>
-      </section>
+  <!-- ---- cube markup (new) ---- -->
+  <div class="cube-stage" aria-hidden="false" title="Cube preview">
+    <div class="cube-wrap" id="cubeWrap" role="application" aria-label="3D cube preview">
+      <div class="cube-face face-front" data-face="front">
+        <div class="face-content">Front</div>
+      </div>
+      <div class="cube-face face-back" data-face="back">
+        <div class="face-content">Back</div>
+      </div>
+      <div class="cube-face face-right" data-face="right">
+        <div class="face-content">Right</div>
+      </div>
+      <div class="cube-face face-left" data-face="left">
+        <div class="face-content">Left</div>
+      </div>
+      <div class="cube-face face-top" data-face="top">
+        <div class="face-content">Top</div>
+      </div>
+      <div class="cube-face face-bottom" data-face="bottom">
+        <div class="face-content">Bottom</div>
+      </div>
+    </div>
 
-      <!-- LEFT -->
-      <section class="face face--left">
-        <video src="left.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Left</span>
-      </section>
-
-      <!-- TOP -->
-      <section class="face face--top">
-        <video src="top.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Top</span>
-      </section>
-
-      <!-- BOTTOM -->
-      <section class="face face--bottom">
-        <video src="bottom.mp4" muted autoplay loop playsinline></video>
-        <span class="label">Bottom</span>
-      </section>
+    <!-- controls (optional) -->
+    <div class="cube-controls" aria-hidden="true">
+      <button id="cubeAuto">Auto</button>
+      <button id="cubeReset">Reset</button>
     </div>
   </div>
 
-  <!-- UI -->
-  <div class="ui">
-    <label style="color:#e5e7eb;font-size:13px;">ขนาด:</label>
-    <input id="sizeRange" type="range" min="180" max="520" value="300" />
-    <button id="toggleSpin">หยุด/เล่นหมุน</button>
-  </div>
+  <!-- original script include -->
+  <script type="module" src="./src/main.js"></script>
 
+  <!-- cube behaviour script (minimal, non-intrusive) -->
   <script>
-    // หมุนด้วยเมาส์/นิ้ว
-    const cube = document.getElementById('cube');
-    let spinning = true;
-    let isPointerDown = false;
-    let startX = 0, startY = 0;
-    let rotX = -12, rotY = 0;
+    (function(){
+      const cube = document.getElementById('cubeWrap');
+      if (!cube) return;
+      // initial rotation
+      let rx = -12, ry = 22;
+      function apply() { cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`; }
+      apply();
 
-    const applyTransform = () => {
-      cube.style.animation = spinning ? 'spin 18s linear infinite' : 'none';
-      cube.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-    };
+      // simple drag to rotate
+      let dragging = false, lastX = 0, lastY = 0;
+      cube.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        lastX = e.clientX; lastY = e.clientY;
+        cube.setPointerCapture?.(e.pointerId);
+      });
+      window.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        ry += dx * 0.3;
+        rx -= dy * 0.25;
+        rx = Math.max(-90, Math.min(90, rx));
+        apply();
+      });
+      window.addEventListener('pointerup', () => { dragging = false; });
 
-    const onPointerDown = (e) => {
-      isPointerDown = true;
-      spinning = false;
-      startX = e.clientX || (e.touches && e.touches[0].clientX);
-      startY = e.clientY || (e.touches && e.touches[0].clientY);
-      applyTransform();
-    };
-    const onPointerMove = (e) => {
-      if (!isPointerDown) return;
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
-      const dx = x - startX;
-      const dy = y - startY;
-      startX = x; startY = y;
-      rotY += dx * 0.4;     // หมุนแกน Y
-      rotX -= dy * 0.4;     // หมุนแกน X
-      applyTransform();
-    };
-    const onPointerUp = () => { isPointerDown = false; };
+      // auto rotate toggle
+      let auto = false, rafId = 0;
+      document.getElementById('cubeAuto').addEventListener('click', () => {
+        auto = !auto;
+        if (auto) { rafId = requestAnimationFrame(loop); document.getElementById('cubeAuto').textContent = 'Stop'; }
+        else { cancelAnimationFrame(rafId); document.getElementById('cubeAuto').textContent = 'Auto'; }
+      });
+      function loop() { ry += 0.35; apply(); rafId = requestAnimationFrame(loop); }
 
-    cube.addEventListener('mousedown', onPointerDown);
-    cube.addEventListener('touchstart', onPointerDown, { passive: true });
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('touchmove', onPointerMove, { passive: true });
-    window.addEventListener('mouseup', onPointerUp);
-    window.addEventListener('touchend', onPointerUp);
+      // reset
+      document.getElementById('cubeReset').addEventListener('click', () => {
+        rx = -12; ry = 22; apply();
+      });
 
-    // ปุ่มหยุด/เล่นหมุน
-    document.getElementById('toggleSpin').addEventListener('click', () => {
-      spinning = !spinning;
-      applyTransform();
-    });
-
-    // ปรับขนาดลูกบาศก์แบบเรียลไทม์
-    const sizeRange = document.getElementById('sizeRange');
-    sizeRange.addEventListener('input', (e) => {
-      const size = e.target.value + 'px';
-      document.documentElement.style.setProperty('--size', size);
-    });
-
-    // บังคับเล่นอัตโนมัติบน iOS/มือถือ (ต้อง muted + playsinline)
-    document.querySelectorAll('video').forEach(v => {
-      const playSilently = () => v.play().catch(() => {});
-      v.addEventListener('canplay', playSilently, { once: true });
-      // ถ้าท่านต้องการเสียง ให้เอา muted ออก แต่ผู้ใช้ต้องกดเล่นเอง
-    });
-     // สร้าง iframe ตัวเดียว (lazy)
-  let activeIframe = null;
-  function ensureIframe() {
-    if (activeIframe) return activeIframe;
-    activeIframe = document.createElement('iframe');
-    activeIframe.style.width = '100%';
-    activeIframe.style.height = '100%';
-    activeIframe.style.border = '0';
-    activeIframe.loading = 'lazy';
-    activeIframe.id = 'single-iframe';
-    return activeIframe;
-  }
-
-  // ฟังก์ชัน mount iframe ลงใน face ที่ต้องการ
-  function mountIframeToFace(faceEl) {
-    const src = faceEl.dataset.src;
-    const iframe = ensureIframe();
-    if (iframe.src !== src) {
-      iframe.src = src;
-    }
-    // ลบ placeholder และ mount
-    faceEl.querySelector('.placeholder')?.remove();
-    // ถ้า face มี child อื่น ลบออกก่อน เพื่อหลีกเลี่ยงการซ้อน DOM
-    while (faceEl.firstChild) faceEl.removeChild(faceEl.firstChild);
-    faceEl.appendChild(iframe);
-  }
-
-  // unmount (ย้ายออก) — เก็บ iframe ไว้ แต่เอาออกจาก DOM
-  function unmountIframe() {
-    if (!activeIframe) return;
-    if (activeIframe.parentElement) activeIframe.parentElement.removeChild(activeIframe);
-  }
-
-  // ตัวอย่าง: mount เมื่อคลิกบนหน้า
-  document.querySelectorAll('.cube-face').forEach(face => {
-    face.addEventListener('click', (e) => {
-      // ป้องกัน click ระหว่าง drag (สมมติมีตัวแปร dragging จากสคริปต์เดิม)
-      if (window.__cubeDragging) return;
-      // ย้าย iframe ไปยัง face นี้
-      mountIframeToFace(face);
-    });
-  });
-
-  // ถ้าต้องการ unmount เมื่อหมุนออกจากมุมมอง: ใช้ IntersectionObserver (ตัวอย่างเบื้องต้น)
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(en => {
-      if (en.isIntersecting) {
-        // เมื่อ face ปรากฏมากกว่า threshold ให้ mount
-        const el = en.target;
-        // เงื่อนไข: mount เฉพาะเมื่อต้องการให้โหลด
-        // mountIframeToFace(el);
-      } else {
-        // ถ้า iframe อยู่บน face นี้ ให้ unmount
-        if (activeIframe && activeIframe.parentElement === en.target) {
-          unmountIframe();
-        }
-      }
-    });
-  }, { threshold: 0.25 });
-
-  document.querySelectorAll('.cube-face').forEach(f => io.observe(f));
+      // accessibility: allow arrow keys
+      window.addEventListener('keydown', (e) => {
+        const step = 10;
+        if (e.key === 'ArrowLeft') ry -= step;
+        if (e.key === 'ArrowRight') ry += step;
+        if (e.key === 'ArrowUp') rx -= step;
+        if (e.key === 'ArrowDown') rx += step;
+        apply();
+      });
+    })();
   </script>
 </body>
 </html>
