@@ -106,6 +106,14 @@
   </style>
 </head>
 <body>
+  <div id="cube" class="cube-wrap" aria-hidden="false">
+  <div class="cube-face face-front" data-face="front" data-src="./pages/single.html"><div class="placeholder">Front</div></div>
+  <div class="cube-face face-back"  data-face="back"  data-src="./pages/single.html"><div class="placeholder">Back</div></div>
+  <div class="cube-face face-right" data-face="right" data-src="./pages/single.html"><div class="placeholder">Right</div></div>
+  <div class="cube-face face-left"  data-face="left"  data-src="./pages/single.html"><div class="placeholder">Left</div></div>
+  <div class="cube-face face-top"   data-face="top"   data-src="./pages/single.html"><div class="placeholder">Top</div></div>
+  <div class="cube-face face-bottom"data-face="bottom"data-src="./pages/single.html"><div class="placeholder">Bottom</div></div>
+</div>
   <div class="stage">
     <div class="back-link"><a href="./main.html">← กลับ</a></div>
     <div class="controls">
@@ -435,6 +443,67 @@
       v.addEventListener('canplay', playSilently, { once: true });
       // ถ้าท่านต้องการเสียง ให้เอา muted ออก แต่ผู้ใช้ต้องกดเล่นเอง
     });
+     // สร้าง iframe ตัวเดียว (lazy)
+  let activeIframe = null;
+  function ensureIframe() {
+    if (activeIframe) return activeIframe;
+    activeIframe = document.createElement('iframe');
+    activeIframe.style.width = '100%';
+    activeIframe.style.height = '100%';
+    activeIframe.style.border = '0';
+    activeIframe.loading = 'lazy';
+    activeIframe.id = 'single-iframe';
+    return activeIframe;
+  }
+
+  // ฟังก์ชัน mount iframe ลงใน face ที่ต้องการ
+  function mountIframeToFace(faceEl) {
+    const src = faceEl.dataset.src;
+    const iframe = ensureIframe();
+    if (iframe.src !== src) {
+      iframe.src = src;
+    }
+    // ลบ placeholder และ mount
+    faceEl.querySelector('.placeholder')?.remove();
+    // ถ้า face มี child อื่น ลบออกก่อน เพื่อหลีกเลี่ยงการซ้อน DOM
+    while (faceEl.firstChild) faceEl.removeChild(faceEl.firstChild);
+    faceEl.appendChild(iframe);
+  }
+
+  // unmount (ย้ายออก) — เก็บ iframe ไว้ แต่เอาออกจาก DOM
+  function unmountIframe() {
+    if (!activeIframe) return;
+    if (activeIframe.parentElement) activeIframe.parentElement.removeChild(activeIframe);
+  }
+
+  // ตัวอย่าง: mount เมื่อคลิกบนหน้า
+  document.querySelectorAll('.cube-face').forEach(face => {
+    face.addEventListener('click', (e) => {
+      // ป้องกัน click ระหว่าง drag (สมมติมีตัวแปร dragging จากสคริปต์เดิม)
+      if (window.__cubeDragging) return;
+      // ย้าย iframe ไปยัง face นี้
+      mountIframeToFace(face);
+    });
+  });
+
+  // ถ้าต้องการ unmount เมื่อหมุนออกจากมุมมอง: ใช้ IntersectionObserver (ตัวอย่างเบื้องต้น)
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        // เมื่อ face ปรากฏมากกว่า threshold ให้ mount
+        const el = en.target;
+        // เงื่อนไข: mount เฉพาะเมื่อต้องการให้โหลด
+        // mountIframeToFace(el);
+      } else {
+        // ถ้า iframe อยู่บน face นี้ ให้ unmount
+        if (activeIframe && activeIframe.parentElement === en.target) {
+          unmountIframe();
+        }
+      }
+    });
+  }, { threshold: 0.25 });
+
+  document.querySelectorAll('.cube-face').forEach(f => io.observe(f));
   </script>
 </body>
 </html>
