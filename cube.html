@@ -9,7 +9,217 @@
       --size: 300px;       /* ขนาดด้านของลูกบาศก์ */
       --gap: 0px;          /* เว้นขอบหน้า */
       --bg: #0e1116;       /* สีพื้นหลัง */
+    }<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Web Portal</title>
+  <style>
+    :root {
+      --face-w: 480px;
+      --face-h: 270px;
+      --gap: 2px;
     }
+    html,body { height:100%; margin:0; background:#111; color:#fff; font-family:system-ui,Segoe UI,Roboto; }
+    .stage {
+      width:100%;
+      height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      perspective:1200px;
+      -webkit-perspective:1200px;
+      overflow:hidden;
+      position:relative;
+    }
+    .cube-wrap {
+      width: calc(var(--face-w) );
+      height: calc(var(--face-h) );
+      transform-style: preserve-3d;
+      transition: transform 600ms cubic-bezier(.2,.9,.2,1);
+      will-change: transform;
+    }
+    .cube-face {
+      position:absolute;
+      width:var(--face-w);
+      height:var(--face-h);
+      box-shadow:0 6px 20px rgba(0,0,0,.6);
+      border:1px solid rgba(255,255,255,.06);
+      overflow:hidden;
+      background:#000;
+      backface-visibility:hidden;
+    }
+    .cube-face iframe {
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+    }
+    /* face transforms: front, back, right, left, top, bottom */
+    .face-front  { transform: translateZ(calc(var(--face-w) / 2)); }
+    .face-back   { transform: rotateY(180deg) translateZ(calc(var(--face-w) / 2)); }
+    .face-right  { transform: rotateY(90deg) translateZ(calc(var(--face-w) / 2)); transform-origin:center; }
+    .face-left   { transform: rotateY(-90deg) translateZ(calc(var(--face-w) / 2)); transform-origin:center; }
+    .face-top    { width:var(--face-w); height:var(--face-h); transform: rotateX(90deg) translateZ(calc(var(--face-h) / 2)); transform-origin:center; }
+    .face-bottom { width:var(--face-w); height:var(--face-h); transform: rotateX(-90deg) translateZ(calc(var(--face-h) / 2)); transform-origin:center; }
+
+    /* simple UI */
+    .controls {
+      position: absolute;
+      right:16px;
+      top:16px;
+      display:flex;
+      gap:8px;
+      z-index:30;
+    }
+    .controls button {
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.06);
+      padding:8px 12px;
+      border-radius:6px;
+      cursor:pointer;
+      backdrop-filter: blur(6px);
+    }
+    .back-link {
+      position:absolute;
+      left:16px;
+      top:16px;
+      z-index:30;
+    }
+    .back-link a {
+      display:inline-block;
+      padding:8px 12px;
+      background:rgba(0,0,0,.5);
+      border:1px solid rgba(255,255,255,.06);
+      color:#fff;
+      text-decoration:none;
+      border-radius:6px;
+    }
+    @media (max-width:900px) {
+      :root { --face-w: 320px; --face-h: 180px; }
+    }
+    @media (max-width:420px) {
+      :root { --face-w: 260px; --face-h: 150px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div class="back-link"><a href="./main.html">← กลับ</a></div>
+    <div class="controls">
+      <button id="auto">Toggle Auto Rotate</button>
+      <button id="reset">Reset</button>
+    </div>
+
+    <div id="cube" class="cube-wrap" aria-hidden="false">
+      <div class="cube-face face-front"><iframe src="./pages/front.html" loading="lazy" title="Front"></iframe></div>
+      <div class="cube-face face-back"><iframe src="./pages/back.html" loading="lazy" title="Back"></iframe></div>
+      <div class="cube-face face-right"><iframe src="./pages/right.html" loading="lazy" title="Right"></iframe></div>
+      <div class="cube-face face-left"><iframe src="./pages/left.html" loading="lazy" title="Left"></iframe></div>
+      <div class="cube-face face-top"><iframe src="./pages/top.html" loading="lazy" title="Top"></iframe></div>
+      <div class="cube-face face-bottom"><iframe src="./pages/bottom.html" loading="lazy" title="Bottom"></iframe></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // cube-main.js แบบฝังเพื่อความง่าย ไม่ต้องแยกไฟล์
+    const cube = document.getElementById('cube');
+    let auto = false;
+    let rx = -10;
+    let ry = 30;
+    let rz = 0;
+    let autoId = 0;
+
+    function applyTransform() {
+      cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
+    }
+    applyTransform();
+
+    // mouse drag rotate
+    let dragging = false;
+    let lastX=0, lastY=0;
+    cube.parentElement.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      cube.parentElement.setPointerCapture(e.pointerId);
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      ry += dx * 0.3;
+      rx -= dy * 0.25;
+      rx = Math.max(-90, Math.min(90, rx));
+      applyTransform();
+    });
+    window.addEventListener('pointerup', () => { dragging = false; });
+
+    // touch friendly wheel
+    window.addEventListener('wheel', (e) => {
+      ry += e.deltaY * 0.02;
+      applyTransform();
+    }, {passive:true});
+
+    // auto rotate
+    document.getElementById('auto').addEventListener('click', () => {
+      auto = !auto;
+      if (auto) {
+        autoId = requestAnimationFrame(autoRotate);
+        document.getElementById('auto').textContent = 'Stop Auto';
+      } else {
+        cancelAnimationFrame(autoId);
+        document.getElementById('auto').textContent = 'Toggle Auto Rotate';
+      }
+    });
+    function autoRotate() {
+      ry += 0.3;
+      applyTransform();
+      autoId = requestAnimationFrame(autoRotate);
+    }
+
+    // reset
+    document.getElementById('reset').addEventListener('click', () => {
+      rx = -10; ry = 30; rz = 0; applyTransform();
+    });
+
+    // optional: allow clicking an iframe face to focus it by moving cube
+    const faces = Array.from(document.querySelectorAll('.cube-face'));
+    faces.forEach((f, idx) => {
+      f.addEventListener('click', (e) => {
+        // prevent click when dragging
+        if (dragging) return;
+        // simple face focus map
+        switch(idx) {
+          case 0: rx=0; ry=0; break; // front
+          case 1: rx=0; ry=180; break; // back
+          case 2: rx=0; ry=90; break; // right
+          case 3: rx=0; ry=-90; break; // left
+          case 4: rx=90; ry=0; break; // top
+          case 5: rx=-90; ry=0; break; // bottom
+        }
+        applyTransform();
+      });
+    });
+
+    // Accessibility hint: allow keyboard arrows
+    window.addEventListener('keydown', (e) => {
+      const step = 10;
+      if (e.key === 'ArrowLeft') ry -= step;
+      if (e.key === 'ArrowRight') ry += step;
+      if (e.key === 'ArrowUp') rx -= step;
+      if (e.key === 'ArrowDown') rx += step;
+      applyTransform();
+    });
+
+  </script>
+</body>
+</html>
+
     html, body {
       height: 100%;
       margin: 0;
