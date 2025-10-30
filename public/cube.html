@@ -90,7 +90,8 @@
     cssRenderer.setSize(sizes.width, sizes.height);
     cssRenderer.domElement.style.position = 'absolute';
     cssRenderer.domElement.style.top = '0px';
-    cssRenderer.domElement.style.pointerEvents = 'none'; // initial: let css objects decide events
+cssRenderer.domElement.style.pointerEvents = 'auto';
+iframe.style.pointerEvents = dot > THRESH ? 'auto' : 'none'; // initial: let css objects decide events
     container.appendChild(cssRenderer.domElement);
 
     // Orbit controls
@@ -165,14 +166,13 @@
 
     // Sync scale: CSS3D units: 1 unit = 1 px in CSS3D; we need to scale cssObject to match THREE units.
     // We'll set a scale factor so that cssObject width (CSS pixels) maps to CUBE_SIZE in THREE units.
-    const CSS_FACE_PX = 512; // the CSS pixel size we set earlier in CSS
-    const scale = CUBE_SIZE / 1.0 / (CSS_FACE_PX / 256); 
+const CSS_FACE_PX = 512;
+const scaleFactor = CUBE_SIZE / CSS_FACE_PX;
+cssObject.scale.setScalar(scaleFactor);
     // Simpler approach: compute scale so that CSS width maps to CUBE_SIZE:
     // If CSS is 512px and we want it to equal CUBE_SIZE world units, set scale = CUBE_SIZE / (CSS_PX/256)
     // The CSS3D renderer uses 1 CSS pixel == 1 unit at default; adjustments sometimes needed. We'll compute properly:
     // Simpler correct mapping:
-    const scaleFactor = CUBE_SIZE / CSS_FACE_PX; // world units per CSS pixel
-    cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
     // We also want the WebGL face surface to visually align with the CSS face.
     // The WebGL cube already has face at z = CUBE_SIZE/2. CSS face is slightly offset to avoid z-fight.
@@ -206,9 +206,9 @@
         cssRenderer.domElement.style.pointerEvents = 'auto';
       } else {
         // hide
-        faceEl.style.visibility = 'hidden';
-        iframe.style.pointerEvents = 'none';
-        cssRenderer.domElement.style.pointerEvents = 'none';
+iframe.style.opacity = dot > THRESH ? 1 : 0;
+iframe.style.pointerEvents = dot > THRESH ? 'auto' : 'none';
+
       }
 
       // optional: reduce opacity when slightly off-angle — visual cue
@@ -261,6 +261,14 @@
 
     // Minor tune: make the CSS face clickable only when front-facing
     // The updateFaceVisibility toggles pointer-events appropriately.
+iframe.addEventListener('load', () => {
+  placeholder.style.display = 'none';
+});
+iframe.addEventListener('error', () => {
+  placeholder.style.display = 'flex';
+});
+const ro = new ResizeObserver(() => onWindowResize());
+ro.observe(container);
 
     // End of module
   </script>
