@@ -17,17 +17,17 @@
     height:100%;
     display:block;
     touch-action:none;
-    pointer-events:auto; /* ให้ canvas รับ pointer events เป็นดีฟอลต์ */
+    pointer-events:auto;
   }
 
-  /* CSS3D container is positioned absolute above canvas */
+  /* CSS3D root */
   .css3d-root {
     position:absolute;
     inset:0;
-    pointer-events:none; /* default none, individual faces control pointer-events */
+    pointer-events:none;
   }
 
-  /* face wrapper (will be used as CSS3DObject.element) */
+  /* face wrapper */
   .css-face {
     width:420px;
     height:315px;
@@ -37,7 +37,7 @@
     box-shadow:0 10px 40px rgba(0,0,0,0.6);
     transform-style:preserve-3d;
     will-change:transform,opacity,visibility;
-    pointer-events:none; /* closed by default so canvas keeps events */
+    pointer-events:none;
     visibility:hidden;
     opacity:0;
     transition:opacity 180ms linear, visibility 0s linear 180ms;
@@ -46,7 +46,7 @@
   .css-face.visible {
     visibility:visible;
     opacity:1;
-    pointer-events:auto; /* wrapper allows pointer when visible; iframe still controlled */
+    pointer-events:auto;
   }
 
   .css-face iframe {
@@ -55,7 +55,7 @@
     border:0;
     display:block;
     background:#071018;
-    pointer-events:none; /* JS toggles this to 'auto' only when interactive */
+    pointer-events:none;
   }
 
   .placeholder {
@@ -129,10 +129,6 @@
   </div>
 
 <script type="module">
-/*--------------
-  Minimal module setup: Three, OrbitControls, CSS3DRenderer via unpkg CDN (ES module)
-  If you need non-module, swap to UMD scripts; this demo uses module imports.
---------------*/
 import * as THREE from 'https://unpkg.com/three@0.156.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.156.0/examples/jsm/controls/OrbitControls.js';
 import { CSS3DRenderer, CSS3DObject } from 'https://unpkg.com/three@0.156.0/examples/jsm/renderers/CSS3DRenderer.js';
@@ -165,7 +161,7 @@ cssRenderer.setSize(window.innerWidth, window.innerHeight);
 cssRenderer.domElement.style.position = 'absolute';
 cssRenderer.domElement.style.top = '0';
 cssRenderer.domElement.style.left = '0';
-cssRenderer.domElement.style.pointerEvents = 'none'; // let DOM elements control events
+cssRenderer.domElement.style.pointerEvents = 'none';
 cssRoot.appendChild(cssRenderer.domElement);
 
 /* orbit */
@@ -173,7 +169,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
-/* simple scene content: cube for reference */
+/* sample content for reference */
 const geo = new THREE.BoxGeometry(1,1,1);
 const mat = new THREE.MeshStandardMaterial({ color:0x0ea5a4, roughness:0.6, metalness:0.0 });
 const cube = new THREE.Mesh(geo, mat);
@@ -190,7 +186,6 @@ faceEl.className = 'css-face';
 faceEl.setAttribute('role','group');
 faceEl.setAttribute('aria-hidden','true');
 
-/* inner iframe and placeholder */
 const iframe = document.createElement('iframe');
 iframe.id = 'theIframe';
 iframe.title = 'embedded content';
@@ -204,17 +199,13 @@ placeholder.innerHTML = '<div><strong>รอโหลด iframe</strong><div sty
 faceEl.appendChild(iframe);
 faceEl.appendChild(placeholder);
 
-/* create CSS3DObject and position it in world */
 const cssObject = new CSS3DObject(faceEl);
-cssObject.position.set(0, 1.4, 0); // ปรับตำแหน่งในโลกสามมิติ
-// rotate the face to face +Z by default (no rotation needed)
-scene.add(new THREE.Object3D()); // placeholder if needed
+cssObject.position.set(0, 1.4, 0);
 scene.add(cssObject);
 
-/* scale: map face px to size (approx). CSS3D uses px => 1 unit mapping,
-   scale so face visually matches 3D units. Tweak CSS_FACE_PX to change. */
-const CSS_FACE_PX = 420; // width in px
-const CUBE_SIZE = 1.2; // target 3D width
+/* scale mapping so CSS face visually matches 3D size */
+const CSS_FACE_PX = 420;
+const CUBE_SIZE = 1.2;
 const scaleFactor = CUBE_SIZE / CSS_FACE_PX;
 cssObject.scale.setScalar(scaleFactor);
 
@@ -224,10 +215,8 @@ let loadTimer = null;
 let retries = 0;
 let lastMessageOrigin = null;
 
-/* helper status */
 function setStatus(s) { statusEl.textContent = 'state: ' + s + (retries ? ' | attempts ' + retries : ''); }
 
-/* load management */
 function startLoad() {
   iframeLoaded = false;
   retries++;
@@ -235,20 +224,17 @@ function startLoad() {
   placeholder.style.display = 'flex';
   document.getElementById('placeholderMsg').textContent = 'กำลังโหลด iframe...';
   clearTimeout(loadTimer);
-  // cache-bust to force reload
   iframe.src = IFRAME_URL + (IFRAME_URL.includes('?') ? '&' : '?') + '_cb=' + Date.now();
   loadTimer = setTimeout(() => {
     if (!iframeLoaded) {
       setStatus('timeout');
       document.getElementById('placeholderMsg').textContent = 'โหลดเกินเวลา หรือ ถูกบล็อก';
-      // keep placeholder visible; user can reload manually
       updateFaceState();
     }
   }, LOAD_TIMEOUT_MS);
 }
 
 iframe.addEventListener('load', () => {
-  // note: load may fire even if content is blocked; we still tentatively mark loaded
   iframeLoaded = true;
   clearTimeout(loadTimer);
   document.getElementById('placeholderMsg').textContent = 'iframe โหลดสำเร็จ';
@@ -266,7 +252,6 @@ iframe.addEventListener('error', () => {
   updateFaceState();
 });
 
-/* optional postMessage handshake: if embedded page sends 'iframe-ready' we trust it */
 window.addEventListener('message', (ev) => {
   const d = ev.data;
   if (d === 'iframe-ready' || (d && d.type === 'iframe-ready')) {
@@ -280,9 +265,7 @@ window.addEventListener('message', (ev) => {
   }
 });
 
-/* core: compute facing using cssObject transform and camera, then combine with iframeLoaded flag */
 function updateFaceState() {
-  // compute facing
   let visibleByFacing = true;
   try {
     const worldPos = new THREE.Vector3();
@@ -293,7 +276,6 @@ function updateFaceState() {
     const toCamera = camera.position.clone().sub(worldPos).normalize();
     const dot = localForward.dot(toCamera);
     visibleByFacing = dot > THRESH;
-    // visual cue
     const opacity = THREE.MathUtils.clamp((dot - THRESH) / (1 - THRESH), 0, 1);
     faceEl.style.opacity = (0.35 + 0.65 * opacity).toString();
   } catch(e) {
@@ -301,14 +283,12 @@ function updateFaceState() {
   }
 
   const finalVisible = visibleByFacing && iframeLoaded;
-
   const threeCanvas = renderer.domElement;
 
   if (finalVisible) {
     faceEl.classList.add('visible');
-    faceEl.style.pointerEvents = 'auto';   // wrapper allows pointer
-    iframe.style.pointerEvents = 'auto';   // iframe interactive
-    // prevent canvas from receiving pointer while iframe interactive
+    faceEl.style.pointerEvents = 'auto';
+    iframe.style.pointerEvents = 'auto';
     if (threeCanvas) threeCanvas.style.pointerEvents = 'none';
     faceEl.setAttribute('aria-hidden','false');
     setStatus('interactive');
@@ -323,17 +303,11 @@ function updateFaceState() {
   }
 }
 
-/* ------------- UI bindings ------------- */
-reloadBtn.addEventListener('click', () => {
-  startLoad();
-});
-forceBtn.addEventListener('click', () => {
-  iframeLoaded = true;
-  placeholder.style.display = 'none';
-  updateFaceState();
-});
+/* UI */
+document.getElementById('reloadBtn').addEventListener('click', () => { startLoad(); });
+document.getElementById('forceBtn').addEventListener('click', () => { iframeLoaded = true; placeholder.style.display = 'none'; updateFaceState(); });
 
-/* ------------- render loop ------------- */
+/* render loop and resize */
 function onWindowResize() {
   camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
@@ -351,14 +325,10 @@ function animate() {
 }
 animate();
 
-/* start initial load */
 startLoad();
 
-/* expose integration helpers */
 window.__FaceIntegration = {
-  cssObject, // initial reference (if you change it externally, replace)
-  setCssObject(obj) { cssObject = obj; },
-  setCamera(cam) { /* not used: camera is internal here */ },
+  setCssObject(obj) { /* not used in this demo */ },
   reload() { startLoad(); },
   forceInteractive() { iframeLoaded = true; updateFaceState(); }
 };
