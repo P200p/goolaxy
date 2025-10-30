@@ -1,306 +1,268 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Holo Orbit</title>
+  <meta charset="utf-8" />
+  <title>Orbit Cube with Embedded Iframe Face</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    /* ---- original site styles ---- */
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+    html,body { height:100%; margin:0; background:#111; overflow:hidden; }
+    #container { width:100%; height:100%; position:relative; }
+    /* overlay UI */
+    .info {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      color: #eee;
+      font-family: system-ui, Roboto, Arial;
+      background: rgba(0,0,0,0.35);
+      padding:8px 10px;
+      border-radius:6px;
+      font-size:13px;
+      z-index: 10;
+      max-width: 320px;
+    }
+    /* iframe wrapper CSS object styling */
+    .css-face {
+      width: 512px;   /* face pixel size (CSS) */
+      height: 512px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+      border-radius: 4px;
       overflow: hidden;
-      background: radial-gradient( circle at center, rgba(0, 0, 0, 0.1) 50%, rgba(5, 0, 20, 1) 100% ), url("./images/bg.png") no-repeat center center / cover;
-      background-color: #050010;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-    /* SVG Overlay HUD */
-    #edgeOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 2;
-      mix-blend-mode: screen;
-    }
-    @keyframes glowPulse { 0% { opacity: 0.2; } 100% { opacity: 0.5; } }
-    #edgeOverlay rect { animation: glowPulse 3s infinite alternate; }
-    .center-ring {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 400px;
-      height: 400px;
-      transform: translate(-50%, -50%);
-      animation: rotate 12s linear infinite;
-      opacity: 0.35;
-      z-index: 3;
-    }
-    @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
-
-    /* Navigation button */
-    .nav-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(26, 26, 46, 0.9);
-      color: #00ffff;
-      padding: 15px 20px;
-      border: 2px solid #00ffff;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      z-index: 1000;
-      backdrop-filter: blur(5px);
-      -webkit-backdrop-filter: blur(5px);
-      transition: all 0.3s ease;
-      text-decoration: none;
-      display: inline-block;
-    }
-    .nav-button:hover { background: #00ffff; color: #1a1a2e; transform: scale(1.05); }
-
-    /* ---- cube styles (new) ---- */
-    :root {
-      /* make faces physically large */
-      --face-w: 960px;
-      --face-h: 540px;
-      /* face spacing (used for translateZ on faces) */
-      --cube-translate: calc(var(--face-w) / 2);
-      /* how far to push the whole cube away (negative Z -> away from camera) */
-      --cube-distance: -900px;
-    }
-
-    /* stage positions the cube within the scene but we keep it pointer-events enabled
-       so users can interact; place it off-center so players must move toward it */
-    .cube-stage {
-      position: fixed;
-      left: 50%;
-      top: 10%;
-      width: calc(var(--face-w) + 80px);
-      height: calc(var(--face-h) + 80px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      perspective: 1400px;
-      z-index: 850;
-      pointer-events: auto;
-      transform: translateX(-50%);
-      /* optional faint hint outline */
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* wrap: we translate the whole cube away so it appears smaller/remote,
-       while keeping face sizes large so when user approaches it becomes prominent */
-    .cube-wrap {
-      width: var(--face-w);
-      height: var(--face-h);
-      transform-style: preserve-3d;
-      /* translateZ moves entire cube along Z axis; negative pushes away */
-      transform: translateZ(var(--cube-distance)) rotateX(-12deg) rotateY(22deg);
-      transition: transform 420ms cubic-bezier(.2,.9,.2,1);
-      position: relative;
-      will-change: transform;
-      pointer-events: auto;
-    }
-
-    .cube-face {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: var(--face-w);
-      height: var(--face-h);
+      background: #222;
       transform-origin: center center;
-      backface-visibility: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));
-      border: 1px solid rgba(255,255,255,0.04);
-      box-shadow: 0 18px 60px rgba(0,0,0,0.6);
-      box-sizing: border-box;
-      transform: translate(-50%, -50%);
-      overflow: hidden;
-      font-family: system-ui, "Segoe UI", Roboto, sans-serif;
-      font-size: 16px;
     }
-
-    /* subtle visual frame so dev/test can see where cube is (lower opacity for production) */
-    .cube-face::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border: 1px dashed rgba(255,255,255,0.02);
-      pointer-events: none;
+    .css-face iframe {
+      width:100%;
+      height:100%;
+      border: none;
+      pointer-events: none; /* disabled by default; enabled when facing camera */
+      background: white;
     }
-
-    /* explicit transforms for 6 faces (use large translateZ matching face width) */
-    .face-front  { transform: translate(-50%, -50%) translateZ(var(--cube-translate)); }
-    .face-back   { transform: translate(-50%, -50%) rotateY(180deg) translateZ(var(--cube-translate)); }
-    .face-right  { transform: translate(-50%, -50%) rotateY(90deg) translateZ(var(--cube-translate)); }
-    .face-left   { transform: translate(-50%, -50%) rotateY(-90deg) translateZ(var(--cube-translate)); }
-    .face-top    { transform: translate(-50%, -50%) rotateX(90deg) translateZ(calc(var(--face-h) / 2)); }
-    .face-bottom { transform: translate(-50%, -50%) rotateX(-90deg) translateZ(calc(var(--face-h) / 2)); }
-
-    /* face content placeholder */
-    .face-content {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.25);
-      color: #cbd5e1;
-      text-align: center;
-      padding: 12px;
-    }
-
-    /* small UI controls overlay (kept minimal) */
-    .cube-controls {
-      position: absolute;
-      right: -14px;
-      top: -14px;
-      display: flex;
-      gap: 8px;
-      z-index: 1100;
-    }
-    .cube-controls button {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.06);
-      color: #fff;
-      padding: 6px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    /* responsive: keep the cube distance proportional on small screens */
-    @media (max-width: 1200px) {
-      :root { --cube-distance: -700px; }
-    }
-    @media (max-width: 900px) {
-      :root { --face-w: 560px; --face-h: 315px; --cube-translate: calc(var(--face-w) / 2); --cube-distance: -600px; }
-      .cube-stage { top: 6%; }
-    }
-    @media (max-width: 420px) {
-      :root { --face-w: 360px; --face-h: 202px; --cube-translate: calc(var(--face-w) / 2); --cube-distance: -420px; }
-      .cube-stage { top: 4%; left: 50%; transform: translateX(-50%); width: calc(var(--face-w) + 40px); height: calc(var(--face-h) + 40px); }
+    /* small border to visualize when iframe not allowed to load content */
+    .placeholder {
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#aaa;
+      font-size:14px;
+      background:linear-gradient(180deg,#111,#222);
     }
   </style>
 </head>
 <body>
-  <!-- Three.js Canvas (original) -->
-  <canvas id="threeCanvas"></canvas>
-
-  <!-- Nav to Cube (original) -->
-  <a href="./cube.html" class="nav-button">🌐 3D Web Portal</a>
-
-  <!-- ---- cube markup (new) ---- -->
-  <div class="cube-stage" aria-hidden="false" title="Distant ad cube">
-    <div class="cube-wrap" id="cubeWrap" role="application" aria-label="Distant big cube ad">
-      <div class="cube-face face-front" data-face="front">
-        <div class="face-content">Ad: Front</div>
-      </div>
-      <div class="cube-face face-back" data-face="back">
-        <div class="face-content">Ad: Back</div>
-      </div>
-      <div class="cube-face face-right" data-face="right">
-        <div class="face-content">Ad: Right</div>
-      </div>
-      <div class="cube-face face-left" data-face="left">
-        <div class="face-content">Ad: Left</div>
-      </div>
-      <div class="cube-face face-top" data-face="top">
-        <div class="face-content">Ad: Top</div>
-      </div>
-      <div class="cube-face face-bottom" data-face="bottom">
-        <div class="face-content">Ad: Bottom</div>
-      </div>
-    </div>
-
-    <!-- controls (optional) -->
-    <div class="cube-controls" aria-hidden="true">
-      <button id="cubeAuto">Auto</button>
-      <button id="cubeReset">Reset</button>
-    </div>
+  <div id="container"></div>
+  <div class="info">
+    Orbit camera: คลิกขวา + ลาก = หมุน · Scroll = ซูม · Left-drag = pan (กดกลาง/shift+drag)<br>
+    เมื่อด้านที่ฝัง iframe หันเข้ากล้อง จะเปิดให้ใช้งานได้ (pointer-events on).<br>
+    หาก iframe ว่างเปล่า อาจถูกบล็อกโดยโฮสต์ (X-Frame-Options/CSP).
   </div>
 
-  <!-- original script include -->
-  <script type="module" src="./src/main.js"></script>
+  <script type="module">
+    // imports (Three.js + examples via unpkg)
+    import * as THREE from 'https://unpkg.com/three@0.154.0/build/three.module.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.154.0/examples/jsm/controls/OrbitControls.js';
+    import { CSS3DRenderer, CSS3DObject } from 'https://unpkg.com/three@0.154.0/examples/jsm/renderers/CSS3DRenderer.js';
 
-  <!-- cube behaviour script (minimal, non-intrusive) -->
-  <script>
-    (function(){
-      const cube = document.getElementById('cubeWrap');
-      if (!cube) return;
-      // initial rotation and a small zoom-in on hover behavior
-      let rx = -12, ry = 22;
-      function apply() { cube.style.transform = `translateZ(var(--cube-distance)) rotateX(${rx}deg) rotateY(${ry}deg)`; }
-      apply();
+    const container = document.getElementById('container');
 
-      // simple drag to rotate
-      let dragging = false, lastX = 0, lastY = 0;
-      cube.addEventListener('pointerdown', (e) => {
-        dragging = true;
-        lastX = e.clientX; lastY = e.clientY;
-        cube.setPointerCapture?.(e.pointerId);
-      });
-      window.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
-        const dx = e.clientX - lastX, dy = e.clientY - lastY;
-        lastX = e.clientX; lastY = e.clientY;
-        ry += dx * 0.22;
-        rx -= dy * 0.18;
-        rx = Math.max(-90, Math.min(90, rx));
-        apply();
-      });
-      window.addEventListener('pointerup', () => { dragging = false; });
+    // sizes
+    const sizes = { width: container.clientWidth, height: container.clientHeight };
 
-      // small hover zoom to hint interactivity (scale cube slightly when pointer is over stage)
-      const stage = document.querySelector('.cube-stage');
-      stage.addEventListener('pointerenter', () => {
-        cube.style.transition = 'transform 320ms cubic-bezier(.2,.9,.2,1)';
-        cube.style.transform = `translateZ(calc(var(--cube-distance) + 120px)) rotateX(${rx}deg) rotateY(${ry}deg)`;
-      });
-      stage.addEventListener('pointerleave', () => {
-        cube.style.transform = `translateZ(var(--cube-distance)) rotateX(${rx}deg) rotateY(${ry}deg)`;
-      });
+    // Scene + camera
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
 
-      // auto rotate toggle
-      let auto = false, rafId = 0;
-      document.getElementById('cubeAuto').addEventListener('click', () => {
-        auto = !auto;
-        if (auto) { rafId = requestAnimationFrame(loop); document.getElementById('cubeAuto').textContent = 'Stop'; }
-        else { cancelAnimationFrame(rafId); document.getElementById('cubeAuto').textContent = 'Auto'; }
-      });
-      function loop() { ry += 0.35; apply(); rafId = requestAnimationFrame(loop); }
+    const camera = new THREE.PerspectiveCamera(60, sizes.width / sizes.height, 0.1, 1000);
+    camera.position.set(3.5, 2.0, 4.5);
 
-      // reset
-      document.getElementById('cubeReset').addEventListener('click', () => {
-        rx = -12; ry = 22; apply();
-      });
+    // WebGL renderer (for cube)
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(sizes.width, sizes.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0px';
+    container.appendChild(renderer.domElement);
 
-      // accessibility: allow arrow keys
-      window.addEventListener('keydown', (e) => {
-        const step = 10;
-        if (e.key === 'ArrowLeft') ry -= step;
-        if (e.key === 'ArrowRight') ry += step;
-        if (e.key === 'ArrowUp') rx -= step;
-        if (e.key === 'ArrowDown') rx += step;
-        apply();
-      });
-    })();
+    // CSS3D renderer (for iframe face)
+    const cssRenderer = new CSS3DRenderer();
+    cssRenderer.setSize(sizes.width, sizes.height);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.top = '0px';
+    cssRenderer.domElement.style.pointerEvents = 'none'; // initial: let css objects decide events
+    container.appendChild(cssRenderer.domElement);
+
+    // Orbit controls
+    const controls = new OrbitControls(camera, cssRenderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1.5;
+    controls.maxDistance = 20;
+
+    // Lights
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(5, 10, 7);
+    scene.add(dir);
+    const amb = new THREE.AmbientLight(0xffffff, 0.25);
+    scene.add(amb);
+
+    // Cube group (WebGL + CSS3D together)
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const CUBE_SIZE = 2.0; // meters
+
+    // WebGL cube (so we see faces)
+    const boxGeo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+
+    // different color for faces
+    const mats = [
+      new THREE.MeshStandardMaterial({ color: 0x4444aa }), // +X
+      new THREE.MeshStandardMaterial({ color: 0xaa4444 }), // -X
+      new THREE.MeshStandardMaterial({ color: 0x44aa44 }), // +Y
+      new THREE.MeshStandardMaterial({ color: 0xaaaa44 }), // -Y
+      new THREE.MeshStandardMaterial({ color: 0x444444 }), // +Z (we'll overlay iframe on this)
+      new THREE.MeshStandardMaterial({ color: 0x8844aa })  // -Z
+    ];
+    const box = new THREE.Mesh(boxGeo, mats);
+    group.add(box);
+
+    // CSS3D face (iframe) - we'll place it at +Z face of cube (front face)
+    // Create element wrapper
+    const faceEl = document.createElement('div');
+    faceEl.className = 'css-face';
+
+    // create iframe
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://goonee.netlify.app/'; // user requested URL
+    iframe.loading = 'eager';
+    // pointer-events disabled by default; will enable when the face faces the camera.
+    iframe.style.pointerEvents = 'none';
+
+    // optionally include a placeholder to show when iframe blocked/unloaded:
+    const placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.innerText = 'Embedded page (iframe)';
+
+    // put iframe into wrapper (iframe may be blocked by host policies)
+    faceEl.appendChild(iframe);
+    // also append placeholder but hidden; placeholder is just fallback if iframe blank
+    // We keep placeholder behind iframe; CSS will show via background if iframe empty.
+    // (not guaranteed to detect blocked iframe reliably, but visible if nothing loads)
+    faceEl.appendChild(placeholder);
+
+    // Create CSS3DObject sized to match face pixel size
+    // The CSS size (512x512) is arbitrary; scale conversion will be handled by three.
+    const cssObject = new CSS3DObject(faceEl);
+
+    // Position cssObject at +Z face center of cube
+    // For the cube centered at group position, face center is at z = +CUBE_SIZE/2
+    cssObject.position.set(0, 0, CUBE_SIZE / 2 + 0.001); // slight offset to avoid z-fighting
+    // No rotation needed: CSS object faces +Z by default; matches box face
+    group.add(cssObject);
+
+    // Sync scale: CSS3D units: 1 unit = 1 px in CSS3D; we need to scale cssObject to match THREE units.
+    // We'll set a scale factor so that cssObject width (CSS pixels) maps to CUBE_SIZE in THREE units.
+    const CSS_FACE_PX = 512; // the CSS pixel size we set earlier in CSS
+    const scale = CUBE_SIZE / 1.0 / (CSS_FACE_PX / 256); 
+    // Simpler approach: compute scale so that CSS width maps to CUBE_SIZE:
+    // If CSS is 512px and we want it to equal CUBE_SIZE world units, set scale = CUBE_SIZE / (CSS_PX/256)
+    // The CSS3D renderer uses 1 CSS pixel == 1 unit at default; adjustments sometimes needed. We'll compute properly:
+    // Simpler correct mapping:
+    const scaleFactor = CUBE_SIZE / CSS_FACE_PX; // world units per CSS pixel
+    cssObject.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+    // We also want the WebGL face surface to visually align with the CSS face.
+    // The WebGL cube already has face at z = CUBE_SIZE/2. CSS face is slightly offset to avoid z-fight.
+
+    // Function to update iframe visibility & pointer-events based on camera facing
+    function updateFaceVisibility() {
+      // world position of face
+      const worldPos = new THREE.Vector3();
+      cssObject.getWorldPosition(worldPos);
+
+      // world forward vector of the face (the face's +Z in world space)
+      const worldQuat = new THREE.Quaternion();
+      cssObject.getWorldQuaternion(worldQuat);
+      const localForward = new THREE.Vector3(0, 0, 1); // CSS face faces +Z
+      const worldForward = localForward.clone().applyQuaternion(worldQuat).normalize();
+
+      // vector from face to camera
+      const toCamera = camera.position.clone().sub(worldPos).normalize();
+
+      // dot product: how much face normal points toward camera
+      const dot = worldForward.dot(toCamera); // if close to 1, facing camera; if negative, back-facing
+
+      // threshold: show iframe when dot > 0.35 (tuneable)
+      const THRESH = 0.35;
+      if (dot > THRESH) {
+        // visible
+        faceEl.style.visibility = 'visible';
+        // enable pointer events only when practically facing
+        iframe.style.pointerEvents = 'auto';
+        // also bring CSS renderer to accept pointer events on that element
+        cssRenderer.domElement.style.pointerEvents = 'auto';
+      } else {
+        // hide
+        faceEl.style.visibility = 'hidden';
+        iframe.style.pointerEvents = 'none';
+        cssRenderer.domElement.style.pointerEvents = 'none';
+      }
+
+      // optional: reduce opacity when slightly off-angle — visual cue
+      const opacity = THREE.MathUtils.clamp((dot - THRESH) / (1 - THRESH), 0, 1);
+      faceEl.style.opacity = (0.35 + 0.65 * opacity).toString();
+    }
+
+    // Responsive
+    window.addEventListener('resize', onWindowResize);
+    function onWindowResize() {
+      sizes.width = container.clientWidth;
+      sizes.height = container.clientHeight;
+      camera.aspect = sizes.width / sizes.height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(sizes.width, sizes.height);
+      cssRenderer.setSize(sizes.width, sizes.height);
+    }
+
+    // Animation loop
+    const clock = new THREE.Clock();
+    function animate() {
+      const dt = clock.getDelta();
+      controls.update();
+
+      // render WebGL
+      renderer.render(scene, camera);
+      // render CSS
+      cssRenderer.render(scene, camera);
+
+      // update face visibility
+      updateFaceVisibility();
+
+      requestAnimationFrame(animate);
+    }
+
+    // initial call
+    animate();
+
+    // Optional: for debugging show world axes
+    // const axes = new THREE.AxesHelper(2.5); scene.add(axes);
+
+    // Pan controls improvements: enable left-drag panning when holding shift
+    // (OrbitControls default: left-drag rotates; we keep that default)
+    // But we can enable middle-button pan
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.DOLLY,
+      RIGHT: THREE.MOUSE.PAN
+    };
+
+    // Minor tune: make the CSS face clickable only when front-facing
+    // The updateFaceVisibility toggles pointer-events appropriately.
+
+    // End of module
   </script>
 </body>
 </html>
