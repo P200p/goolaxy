@@ -3,315 +3,364 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Iframe face with load flag and pointer control</title>
+<title>Three + CSS3D iframe integration (Orbit safe)</title>
 <style>
-  /* container ของ scene / css-face */
-  body, html { height: 100%; margin: 0; background: #0b0b0b; color: #eee; font-family: Inter, system-ui, sans-serif; }
-  .stage {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  :root { --bg:#0b0b0b; --muted:#9aa3b2; --accent:#0ea5a4; }
+  html,body { height:100%; margin:0; background:var(--bg); color:#e9eef6; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; }
+  #app { position:relative; width:100%; height:100%; overflow:hidden; }
+
+  /* WebGL canvas */
+  canvas#three-canvas {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none;
+    pointer-events:auto; /* ให้ canvas รับ pointer events เป็นดีฟอลต์ */
   }
 
-  /* face wrapper (ตำแหน่งและ transform จะถูกควบคุมจาก THREE CSS3DObject) */
+  /* CSS3D container is positioned absolute above canvas */
+  .css3d-root {
+    position:absolute;
+    inset:0;
+    pointer-events:none; /* default none, individual faces control pointer-events */
+  }
+
+  /* face wrapper (will be used as CSS3DObject.element) */
   .css-face {
-    width: 420px;            /* ปรับขนาดตามความต้องการ */
-    height: 315px;
-    position: absolute;
-    transform-style: preserve-3d;
-    will-change: transform, opacity, visibility;
-    display: flex;
-    align-items: stretch;
-    justify-content: stretch;
-    background: transparent;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    overflow: hidden;
-    visibility: hidden;     /* เริ่มปิดไว้จนกว่าเงื่อนไขจะพร้อม */
-    opacity: 0;
-    transition: opacity 200ms linear, visibility 0s linear 200ms;
-    pointer-events: none;   /* ปิดไว้เป็นค่าเริ่มต้น JS จะเปิดเมื่อพร้อม */
+    width:420px;
+    height:315px;
+    border-radius:12px;
+    overflow:hidden;
+    background:linear-gradient(180deg,#0f1720,#0b1220);
+    box-shadow:0 10px 40px rgba(0,0,0,0.6);
+    transform-style:preserve-3d;
+    will-change:transform,opacity,visibility;
+    pointer-events:none; /* closed by default so canvas keeps events */
+    visibility:hidden;
+    opacity:0;
+    transition:opacity 180ms linear, visibility 0s linear 180ms;
   }
 
-  /* iframe: ไม่มี pointer-events ใน CSS ให้ JS ควบคุมทั้งหมด */
+  .css-face.visible {
+    visibility:visible;
+    opacity:1;
+    pointer-events:auto; /* wrapper allows pointer when visible; iframe still controlled */
+  }
+
   .css-face iframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-    background: #111;
+    width:100%;
+    height:100%;
+    border:0;
+    display:block;
+    background:#071018;
+    pointer-events:none; /* JS toggles this to 'auto' only when interactive */
   }
 
-  /* placeholder จะแสดงแทน iframe ขณะรอโหลดหรือเมื่อมีปัญหา */
   .placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(180deg,#111,#151515);
-    color: #d9d9d9;
-    font-size: 14px;
-    gap: 8px;
-    padding: 12px;
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#cbd5e1;
+    gap:8px;
+    padding:12px;
+    text-align:center;
+    background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.45));
+    font-size:13px;
   }
 
-  .placeholder small { opacity: 0.8; font-size: 12px; }
+  .controls-ui {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    z-index:30;
+  }
 
-  /* ปุ่ม retry ธรรมดา */
   .btn {
-    background: #0ea5a4;
-    color: #042;
-    border: none;
-    padding: 6px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
+    background:var(--accent);
+    color:#042;
+    border:none;
+    padding:8px 10px;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
   }
 
   .status {
-    position: absolute;
-    left: 12px;
-    top: 12px;
-    font-size: 12px;
-    color: #9aa3b2;
-    background: rgba(0,0,0,0.35);
-    padding: 6px 8px;
-    border-radius: 8px;
+    position:absolute;
+    left:12px;
+    top:12px;
+    font-size:12px;
+    color:var(--muted);
+    background:rgba(0,0,0,0.35);
+    padding:6px 8px;
+    border-radius:8px;
     backdrop-filter: blur(6px);
+    z-index:20;
   }
 
-  /* visible state modifier (JS จะเปลี่ยนคลาสหรือ style โดยตรง) */
-  .css-face.visible {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 180ms linear;
-    pointer-events: auto; /* ตัว wrapper อนุญาต pointer เมื่อ JS ตัดสินใจ (ต่อด้วย iframe pointer-events) */
+  footer.note {
+    position:absolute;
+    left:12px;
+    bottom:12px;
+    color:var(--muted);
+    font-size:12px;
+    z-index:20;
   }
 </style>
 </head>
 <body>
-  <div class="stage" id="stage">
-    <!-- ตัวอย่าง wrapper ที่จะถูกผนวกเข้ากับ CSS3DObject ใน scene ของคุณ
-         ถ้าไม่ได้ใช้ THREE CSS3D ให้วาง element นี้ไว้ใน DOM ปกติก็ได้ -->
-    <div id="face" class="css-face" role="group" aria-label="3D iframe face">
-      <iframe id="theIframe" src="about:blank" title="embedded content" sandbox="allow-scripts allow-same-origin"></iframe>
-      <div class="placeholder" id="placeholder">
-        <div>
-          <div><strong>กำลังโหลดเนื้อหา</strong></div>
-          <small id="placeholderMsg">รอ iframe โหลดหรือรอการตอบกลับ</small>
-          <div style="margin-top:8px; display:flex; gap:8px;">
-            <button id="retryBtn" class="btn">ลองใหม่</button>
-            <button id="openBtn" class="btn" style="background:#8b5cf6; color:white;">เปิดในแท็บใหม่</button>
-          </div>
-        </div>
-      </div>
-      <div class="status" id="status">state: init</div>
+  <div id="app">
+    <canvas id="three-canvas"></canvas>
+    <div class="css3d-root" id="css3d-root"></div>
+
+    <div class="controls-ui">
+      <button id="reloadBtn" class="btn">Reload iframe</button>
+      <button id="forceBtn" class="btn" style="background:#8b5cf6;color:white">Force interactive</button>
     </div>
+    <div class="status" id="status">state: init</div>
+    <footer class="note">Demo: OrbitControls kept while iframe inactive; iframe interactive only when ready</footer>
   </div>
 
-<script>
-/*
-  Behavior summary
-  - iframeLoaded flag ถูกเซ็ตจาก event load / error และจาก postMessage handshake ถ้า iframe ฝังมาจากแหล่งที่ส่งข้อความได้
-  - updateFaceState() จะถูกเรียกทุกเฟรม (หรือทุกครั้งที่สถานะเปลี่ยน) เพื่อคำนวณ visible/pointer-events ตาม dot กับ flag
-  - retry logic: กดปุ่ม retry เพื่อโหลดซ้ำ โดยมี retry count และ timeout
-  - สามารถใช้ร่วมกับ THREE CSS3DObject โดยเอา element #face ใส่เป็น cssObject.element
-*/
+<script type="module">
+/*--------------
+  Minimal module setup: Three, OrbitControls, CSS3DRenderer via unpkg CDN (ES module)
+  If you need non-module, swap to UMD scripts; this demo uses module imports.
+--------------*/
+import * as THREE from 'https://unpkg.com/three@0.156.0/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.156.0/examples/jsm/controls/OrbitControls.js';
+import { CSS3DRenderer, CSS3DObject } from 'https://unpkg.com/three@0.156.0/examples/jsm/renderers/CSS3DRenderer.js';
 
-/* ปรับค่าเหล่านี้ตามแอปของคุณ */
-const IFRAME_URL = 'https://example.com/';   // <-- แก้เป็น URL จริงที่ต้องการฝัง
+/* ------------- Config ------------- */
+const IFRAME_URL = 'https://example.com/'; // <<< แก้เป็น URL ที่ต้องการฝัง
+const THRESH = 0.35;
 const LOAD_TIMEOUT_MS = 6000;
-const MAX_RETRIES = 3;
-const THRESH = 0.35; // dot threshold สำหรับการหันหน้าเข้ากล้อง
 
-/* ตัวแปร global / state */
-const faceEl = document.getElementById('face');
-const iframe = document.getElementById('theIframe');
-const placeholder = document.getElementById('placeholder');
+/* ------------- DOM refs ------------- */
+const canvas = document.getElementById('three-canvas');
+const cssRoot = document.getElementById('css3d-root');
 const statusEl = document.getElementById('status');
-const retryBtn = document.getElementById('retryBtn');
-const openBtn = document.getElementById('openBtn');
+const reloadBtn = document.getElementById('reloadBtn');
+const forceBtn = document.getElementById('forceBtn');
 
+/* ------------- Three scene ------------- */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x071020);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 2000);
+camera.position.set(0, 1.6, 3);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+const cssRenderer = new CSS3DRenderer();
+cssRenderer.setSize(window.innerWidth, window.innerHeight);
+cssRenderer.domElement.style.position = 'absolute';
+cssRenderer.domElement.style.top = '0';
+cssRenderer.domElement.style.left = '0';
+cssRenderer.domElement.style.pointerEvents = 'none'; // let DOM elements control events
+cssRoot.appendChild(cssRenderer.domElement);
+
+/* orbit */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+/* simple scene content: cube for reference */
+const geo = new THREE.BoxGeometry(1,1,1);
+const mat = new THREE.MeshStandardMaterial({ color:0x0ea5a4, roughness:0.6, metalness:0.0 });
+const cube = new THREE.Mesh(geo, mat);
+cube.position.set(-1.2, 1.0, 0);
+scene.add(cube);
+
+const light = new THREE.DirectionalLight(0xffffff, 1.0);
+light.position.set(5,10,7);
+scene.add(light);
+
+/* ------------- CSS3D face setup (iframe wrapper) ------------- */
+const faceEl = document.createElement('div');
+faceEl.className = 'css-face';
+faceEl.setAttribute('role','group');
+faceEl.setAttribute('aria-hidden','true');
+
+/* inner iframe and placeholder */
+const iframe = document.createElement('iframe');
+iframe.id = 'theIframe';
+iframe.title = 'embedded content';
+iframe.sandbox = 'allow-scripts allow-same-origin';
+iframe.src = 'about:blank';
+
+const placeholder = document.createElement('div');
+placeholder.className = 'placeholder';
+placeholder.innerHTML = '<div><strong>รอโหลด iframe</strong><div style="margin-top:6px"><small id="placeholderMsg">initializing</small></div></div>';
+
+faceEl.appendChild(iframe);
+faceEl.appendChild(placeholder);
+
+/* create CSS3DObject and position it in world */
+const cssObject = new CSS3DObject(faceEl);
+cssObject.position.set(0, 1.4, 0); // ปรับตำแหน่งในโลกสามมิติ
+// rotate the face to face +Z by default (no rotation needed)
+scene.add(new THREE.Object3D()); // placeholder if needed
+scene.add(cssObject);
+
+/* scale: map face px to size (approx). CSS3D uses px => 1 unit mapping,
+   scale so face visually matches 3D units. Tweak CSS_FACE_PX to change. */
+const CSS_FACE_PX = 420; // width in px
+const CUBE_SIZE = 1.2; // target 3D width
+const scaleFactor = CUBE_SIZE / CSS_FACE_PX;
+cssObject.scale.setScalar(scaleFactor);
+
+/* ------------- state & logic ------------- */
 let iframeLoaded = false;
-let lastLoadAttempt = 0;
-let retries = 0;
 let loadTimer = null;
-let lastMessageOrigin = null; // ถ้าจำเป็นจะตรวจ origin ของ postMessage
-let cssObject = null; // ถ้าคุณใช้ THREE CSS3DObject ให้ตั้ง cssObject = new CSS3DObject(faceEl)
-let camera = null; // ถ้าคุณมี THREE camera ให้มอบเข้าเพื่อ dot calculation
-let visibleByFacing = false; // internal
-let visibleByFlag = false;   // internal
+let retries = 0;
+let lastMessageOrigin = null;
 
-/* ตั้งค่า iframe src และเริ่มนับโหลดครั้งแรก */
+/* helper status */
+function setStatus(s) { statusEl.textContent = 'state: ' + s + (retries ? ' | attempts ' + retries : ''); }
+
+/* load management */
 function startLoad() {
-  // ปิดการ interactive ชั่วคราว
   iframeLoaded = false;
-  updatePlaceholder('เริ่มโหลด iframe...');
-  setStatus('loading');
-  clearLoadTimer();
-
-  lastLoadAttempt = Date.now();
   retries++;
-
-  // ให้ src พร้อม query เพื่อบังคับ reload ถ้าจำเป็น
-  const cacheBuster = '?_cb=' + Date.now();
-  iframe.src = IFRAME_URL + cacheBuster;
-
-  // ตั้ง timeout เพื่อจับกรณี iframe ไม่ตอบหรือถูกบล็อก
+  setStatus('loading');
+  placeholder.style.display = 'flex';
+  document.getElementById('placeholderMsg').textContent = 'กำลังโหลด iframe...';
+  clearTimeout(loadTimer);
+  // cache-bust to force reload
+  iframe.src = IFRAME_URL + (IFRAME_URL.includes('?') ? '&' : '?') + '_cb=' + Date.now();
   loadTimer = setTimeout(() => {
-    // ถ้ายังไม่โหลด ให้ถือว่า fail
     if (!iframeLoaded) {
       setStatus('timeout');
-      updatePlaceholder('โหลดเกินเวลา หรือ ถูกบล็อก. ลองกดลองใหม่');
-      // เราไม่ auto-retry หลายรอบเพื่อป้องกัน loop; ให้ผู้ใช้กด retry
+      document.getElementById('placeholderMsg').textContent = 'โหลดเกินเวลา หรือ ถูกบล็อก';
+      // keep placeholder visible; user can reload manually
+      updateFaceState();
     }
   }, LOAD_TIMEOUT_MS);
 }
 
-/* ล้าง timer */
-function clearLoadTimer() {
-  if (loadTimer) {
-    clearTimeout(loadTimer);
-    loadTimer = null;
-  }
-}
-
-/* event listeners ของ iframe */
 iframe.addEventListener('load', () => {
-  // แม้ว่า load จะเกิดขึ้น แต่ไม่ได้การันตีว่า content usable (CSP/X-Frame-Options อาจทำให้หน้าแสดง error)
+  // note: load may fire even if content is blocked; we still tentatively mark loaded
   iframeLoaded = true;
-  clearLoadTimer();
-  updatePlaceholder('iframe โหลดสำเร็จ');
+  clearTimeout(loadTimer);
+  document.getElementById('placeholderMsg').textContent = 'iframe โหลดสำเร็จ';
+  placeholder.style.display = 'none';
   setStatus('loaded');
-  // ซ่อน placeholder ทันทีและอัปเดตการแสดงผล
-  if (placeholder) placeholder.style.display = 'none';
   updateFaceState();
 });
 
 iframe.addEventListener('error', () => {
   iframeLoaded = false;
-  clearLoadTimer();
+  clearTimeout(loadTimer);
+  document.getElementById('placeholderMsg').textContent = 'เกิดข้อผิดพลาดขณะโหลด';
+  placeholder.style.display = 'flex';
   setStatus('error');
-  updatePlaceholder('เกิดข้อผิดพลาดระหว่างโหลด iframe');
-  if (placeholder) placeholder.style.display = 'flex';
   updateFaceState();
 });
 
-/* postMessage handshake (ถ้า iframe origin ส่งข้อความ "ready" จะใช้เป็นสัญญาณว่าพร้อมจริง) */
+/* optional postMessage handshake: if embedded page sends 'iframe-ready' we trust it */
 window.addEventListener('message', (ev) => {
-  // ถ้าระบุ origin ที่คาดหวัง ให้ตรวจเช็ก ev.origin เทียบกับ expected origin
-  // ตัวอย่างนี้ยอมรับข้อความ "iframe-ready" จากทุก origin เพื่อความยืดหยุ่น
-  const data = ev.data;
-  if (data && (data === 'iframe-ready' || data.type === 'iframe-ready')) {
+  const d = ev.data;
+  if (d === 'iframe-ready' || (d && d.type === 'iframe-ready')) {
     iframeLoaded = true;
     lastMessageOrigin = ev.origin;
-    clearLoadTimer();
-    updatePlaceholder('iframe ส่งสัญญาณพร้อม');
+    clearTimeout(loadTimer);
+    document.getElementById('placeholderMsg').textContent = 'iframe ส่งสัญญาณ ready';
+    placeholder.style.display = 'none';
     setStatus('handshake');
-    if (placeholder) placeholder.style.display = 'none';
     updateFaceState();
   }
 });
 
-/* ปุ่ม retry และ open */
-retryBtn.addEventListener('click', () => {
-  if (retries >= MAX_RETRIES) {
-    updatePlaceholder('ถึงจำนวน retry สูงสุดแล้ว ลองเปิดในแท็บใหม่');
-    return;
-  }
-  updatePlaceholder('ลองโหลดใหม่...');
-  startLoad();
-});
-
-openBtn.addEventListener('click', () => {
-  window.open(IFRAME_URL, '_blank', 'noopener,noreferrer');
-});
-
-/* helper: แสดงข้อความใน placeholder */
-function updatePlaceholder(msg) {
-  const msgEl = document.getElementById('placeholderMsg');
-  if (msgEl) msgEl.textContent = msg;
-}
-
-/* helper: อัปเดต status bar */
-function setStatus(s) {
-  statusEl.textContent = 'state: ' + s + (retries ? ' | attempts ' + retries : '');
-}
-
-/* core: คำนวณ visible จากทิศทาง (dot) และ flag iframeLoaded
-   - ถ้าคุณใช้ THREE ให้กำหนด cssObject และ camera ให้ตรงกับ scene ของคุณ
-   - ถ้าไม่ใช้ THREE คุณสามารถเรียก updateFaceStateVisible(true/false) ตาม logic ของคุณได้ */
+/* core: compute facing using cssObject transform and camera, then combine with iframeLoaded flag */
 function updateFaceState() {
-  // ถ้าไม่มี THREE camera หรือ cssObject ให้ fallback: ถ้า iframeLoaded ให้โชว์เสมอ
-  if (!cssObject || !camera) {
-    visibleByFacing = true;
-  } else {
-    // คำนวณ dot ระหว่าง forward ของ cssObject กับ vector ไปยัง camera
+  // compute facing
+  let visibleByFacing = true;
+  try {
     const worldPos = new THREE.Vector3();
     cssObject.getWorldPosition(worldPos);
-
     const worldQuat = new THREE.Quaternion();
     cssObject.getWorldQuaternion(worldQuat);
-
-    const localForward = new THREE.Vector3(0, 0, 1);
-    const worldForward = localForward.clone().applyQuaternion(worldQuat).normalize();
-
+    const localForward = new THREE.Vector3(0,0,1).applyQuaternion(worldQuat).normalize();
     const toCamera = camera.position.clone().sub(worldPos).normalize();
-    const dot = worldForward.dot(toCamera);
+    const dot = localForward.dot(toCamera);
     visibleByFacing = dot > THRESH;
-
-    // ปรับ opacity เป็น visual cue เมื่อเริ่มหัน (ถ้ามี)
+    // visual cue
     const opacity = THREE.MathUtils.clamp((dot - THRESH) / (1 - THRESH), 0, 1);
     faceEl.style.opacity = (0.35 + 0.65 * opacity).toString();
+  } catch(e) {
+    visibleByFacing = true;
   }
 
-  visibleByFlag = !!iframeLoaded;
+  const finalVisible = visibleByFacing && iframeLoaded;
 
-  const finalVisible = visibleByFacing && visibleByFlag;
+  const threeCanvas = renderer.domElement;
 
-  // อัปเดต DOM ตาม finalVisible
   if (finalVisible) {
     faceEl.classList.add('visible');
-    faceEl.style.pointerEvents = 'auto';     // wrapper อนุญาต pointer
-    iframe.style.pointerEvents = 'auto';     // iframe ให้ interactive
-    if (placeholder) placeholder.style.display = 'none';
+    faceEl.style.pointerEvents = 'auto';   // wrapper allows pointer
+    iframe.style.pointerEvents = 'auto';   // iframe interactive
+    // prevent canvas from receiving pointer while iframe interactive
+    if (threeCanvas) threeCanvas.style.pointerEvents = 'none';
+    faceEl.setAttribute('aria-hidden','false');
     setStatus('interactive');
   } else {
     faceEl.classList.remove('visible');
     faceEl.style.pointerEvents = 'none';
     iframe.style.pointerEvents = 'none';
-    if (!iframeLoaded) {
-      // ถ้ายังไม่โหลด แสดง placeholder
-      if (placeholder) placeholder.style.display = 'flex';
-    }
+    if (threeCanvas) threeCanvas.style.pointerEvents = 'auto';
+    if (!iframeLoaded) placeholder.style.display = 'flex';
+    faceEl.setAttribute('aria-hidden','true');
     setStatus('inactive');
   }
 }
 
-/* animate loop หากใช้ THREE รันแยกหรือรวมกับ render loop ของคุณ
-   ตัวอย่างนี้รัน updateFaceState ทุกเฟรม แต่คุณอาจเรียกมันเฉพาะเมื่อ camera เคลื่อนก็ได้ */
-function animateLoop() {
-  // ถ้าคุณมี THREE render loop ให้เอา updateFaceState() ไว้ก่อน render
+/* ------------- UI bindings ------------- */
+reloadBtn.addEventListener('click', () => {
+  startLoad();
+});
+forceBtn.addEventListener('click', () => {
+  iframeLoaded = true;
+  placeholder.style.display = 'none';
   updateFaceState();
-  requestAnimationFrame(animateLoop);
-}
-requestAnimationFrame(animateLoop);
+});
 
-/* เริ่มโหลดครั้งแรก */
+/* ------------- render loop ------------- */
+function onWindowResize() {
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  cssRenderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onWindowResize, false);
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  updateFaceState();
+  renderer.render(scene, camera);
+  cssRenderer.render(scene, camera);
+}
+animate();
+
+/* start initial load */
 startLoad();
 
-/* Exports สำหรับ integration: ให้คุณตั้ง cssObject และ camera จากภายนอกได้ */
-window.__FaceControl = {
+/* expose integration helpers */
+window.__FaceIntegration = {
+  cssObject, // initial reference (if you change it externally, replace)
   setCssObject(obj) { cssObject = obj; },
-  setCamera(cam) { camera = cam; },
-  forceShow() { iframeLoaded = true; updateFaceState(); },
-  forceHide() { iframeLoaded = false; updateFaceState(); },
-  reloadIframe() { startLoad(); }
+  setCamera(cam) { /* not used: camera is internal here */ },
+  reload() { startLoad(); },
+  forceInteractive() { iframeLoaded = true; updateFaceState(); }
 };
 </script>
 </body>
