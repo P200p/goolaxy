@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Iframe Cube</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    iframe {
+      border: none;
+      width: 1024px;
+      height: 1024px;
+    }
+  </style>
+</head>
+<body>
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
+    import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js";
+
+    // --- Scene, Camera, Renderer ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 1000);
+    camera.position.set(2, 2, 2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+
+    // --- สร้าง Iframe texture ---
+    const urls = [
+      "https://goonee.netlify.app/",
+      "https://goonee.netlify.app/",
+      "https://goonee.netlify.app/",
+      "https://goonee.netlify.app/",
+      "https://goonee.netlify.app/",
+      "https://goonee.netlify.app/"
+    ];
+
+    const materials = urls.map((url) => {
+      const iframe = document.createElement("iframe");
+      iframe.src = url;
+      const texture = new THREE.CanvasTexture(iframe);
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      return material;
+    });
+
+    // --- Cube ---
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const cube = new THREE.Mesh(geometry, materials);
+    scene.add(cube);
+
+    // --- Light ---
+    const light = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(light);
+
+    // --- Animation ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      cube.rotation.y += 0.002;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- Resize ---
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
