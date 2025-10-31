@@ -68,7 +68,7 @@ async function loadCards() {
   let lastErr = null;
   for (const p of tryPaths) {
     try {
-      console.debug(`Attempting to fetch cards JSON from: ${p}`);
+      console.debug(`Attempting to fetch project JSON from: ${p}`);
       const res = await fetch(p);
       if (!res.ok) {
         lastErr = new Error(`HTTP ${res.status} when fetching ${p}`);
@@ -88,8 +88,8 @@ async function loadCards() {
         }
       });
 
-      console.info(`Loaded cards object from ${p}. Found ${cards.length} sprite(s).`);
-      if (cards.length === 0) console.warn('No sprites found in parsed cards.json object.');
+      console.info(`Loaded project object from ${p}. Found ${cards.length} sprite(s).`);
+      if (cards.length === 0) console.warn('No sprites found in parsed project.json object.');
       return;
     } catch (err) {
       lastErr = err;
@@ -98,7 +98,7 @@ async function loadCards() {
     }
   }
 
-  console.error('Failed to load cards.json from any tried path.', lastErr);
+  console.error('Failed to load project.json from any tried path.', lastErr);
 }
 
 loadCards();
