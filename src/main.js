@@ -157,10 +157,8 @@ animate();
 
 // -------------------- RESIZE --------------------
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}, { passive: true });
+({ x: pointer.x, y: pointer.y } = getPointerNDCCoords(event));
+
 // -------------------- INTERACTION / HOVER (REPLACE THESE) --------------------
 
 // Helper: compute normalized device coordinates relative to renderer canvas
@@ -177,8 +175,8 @@ function getPointerNDCCoords(event) {
 
 function onMouseMove(event) {
   const { x, y } = getPointerNDCCoords(event);
-  pointer.x = x;
-  pointer.y = y;
+({ x: pointer.x, y: pointer.y } = getPointerNDCCoords(event));
+
 
   raycaster.setFromCamera(pointer, camera);
 
