@@ -148,27 +148,49 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }, { passive: true });
+// -------------------- INTERACTION / HOVER (REPLACE THESE) --------------------
 
-// -------------------- INTERACTION / HOVER --------------------
+// Helper: compute normalized device coordinates relative to renderer canvas
+function getPointerNDCCoords(event) {
+  const canvas = renderer.domElement;
+  const rect = canvas.getBoundingClientRect();
+  // event may be MouseEvent or TouchEvent
+  const clientX = event.clientX !== undefined ? event.clientX : (event.touches && event.touches[0] && event.touches[0].clientX);
+  const clientY = event.clientY !== undefined ? event.clientY : (event.touches && event.touches[0] && event.touches[0].clientY);
+  const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  return { x, y, rect };
+}
+
 function onMouseMove(event) {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  const { x, y } = getPointerNDCCoords(event);
+  pointer.x = x;
+  pointer.y = y;
 
   raycaster.setFromCamera(pointer, camera);
+
+  // debug: how many cards we try to hit-test
+  // eslint-disable-next-line no-console
+  console.debug('raycast: cards.length=', cards.length, 'pointer=', pointer);
+
   const intersects = raycaster.intersectObjects(cards, true);
 
+  // debug intersect
   if (intersects.length > 0) {
-    const sprite = intersects[0].object;
-       if (hoveredCard !== sprite) {
-      // restore previous
+    // eslint-disable-next-line no-console
+    console.debug('raycast intersects:', intersects.length, intersects[0].object.name || intersects[0].object.uuid);
+  }
+
+  if (intersects.length > 0) {
+    const obj = intersects[0].object;
+    if (hoveredCard !== obj) {
       if (hoveredCard) {
         const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
         hoveredCard.scale.setScalar(prevOrig);
       }
-      hoveredCard = sprite;
-      // non-destructive visual feedback (scale-only)
+      hoveredCard = obj;
       const orig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : (hoveredCard.scale.x || 1);
-      const HOVER_FACTOR = 1.5;
+      const HOVER_FACTOR = 1.2; // smaller factor to be less jarring
       hoveredCard.scale.setScalar(orig * HOVER_FACTOR);
     }
   } else {
@@ -179,29 +201,65 @@ function onMouseMove(event) {
     }
   }
 }
-window.addEventListener("mousemove", onMouseMove, { passive: true });
+window.addEventListener('mousemove', onMouseMove, { passive: true });
 
+// -------------------- Click handler (replacement) --------------------
+function findUrlOnObjectOrParents(obj) {
+  // check immediate object
+  if (!obj) return null;
+  if (obj.userData && obj.userData.url) return obj.userData.url;
+  // material.userData
+  if (obj.material && obj.material.userData && obj.material.userData.url) return obj.material.userData.url;
+  // walk parents up to scene root
+  let p = obj.parent;
+  while (p) {
+    if (p.userData && p.userData.url) return p.userData.url;
+    if (p.material && p.material.userData && p.material.userData.url) return p.material.userData.url;
+    p = p.parent;
+  }
+  return null;
+}
 
-
-// -------------------- OPTIONAL: Click / Pointer handlers (example) --------------------
 function onClick(event) {
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  const { x, y, rect } = getPointerNDCCoords(event);
+  pointer.x = x;
+  pointer.y = y;
+
+  // debug: show pointer and canvas rect to verify coordinate mapping
+  // eslint-disable-next-line no-console
+  console.debug('onClick pointer', pointer, 'canvasRect', rect);
 
   raycaster.setFromCamera(pointer, camera);
-  
-  // ตรวจสอบ cards เท่านั้น (ไม่มี iframe cube แล้ว)
-  const intersects = raycaster.intersectObjects(cards, true); // recursive
+  // debug: confirm we are raycasting against cards
+  // eslint-disable-next-line no-console
+  console.debug('onClick raycasting against cards.length=', cards.length);
+
+  const intersects = raycaster.intersectObjects(cards, true);
+
+  // debug: list first few intersects
+  if (intersects.length > 0) {
+    // eslint-disable-next-line no-console
+    console.debug('onClick intersects count', intersects.length, 'top object', intersects[0].object.name || intersects[0].object.uuid);
+  } else {
+    // eslint-disable-next-line no-console
+    console.debug('onClick no intersects');
+  }
 
   if (intersects.length > 0) {
-    const sprite = intersects[0].object;
-    if (sprite.material && sprite.material.userData && sprite.material.userData.url) {
-      const url = sprite.material.userData.url;
+    const hit = intersects[0].object;
+    const url = findUrlOnObjectOrParents(hit);
+    // debug: show object and found URL
+    // eslint-disable-next-line no-console
+    console.debug('onClick hit object', hit.name || hit.uuid, 'found url', url);
+    if (url) {
       const message = `พบลิงค์: ${url}\n\nต้องการเปิดลิงค์นี้ไหม?`;
       if (window.confirm(message)) {
-        window.open(url, "_blank", "noopener,noreferrer");
+        window.open(url, '_blank', 'noopener,noreferrer');
       }
+    } else {
+      // eslint-disable-next-line no-console
+      console.debug('onClick: no url found on hit object or parents. Inspect object:', hit);
     }
   }
 }
-window.addEventListener("click", onClick);
+window.addEventListener('click', onClick);
