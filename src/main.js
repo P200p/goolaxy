@@ -11,7 +11,20 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
+
 camera.position.set(0, 0, 6);
+// --- safe debug expose: attach runtime objects to window only if they exist ---
+['scene','camera','renderer','cards','raycaster','pointer','hoveredCard'].forEach(k => {
+  try {
+    // prefer checking global scope first, then module scope variable
+    if (typeof window[k] === 'undefined') {
+      if (typeof eval(k) !== 'undefined') window[k] = eval(k);
+    }
+  } catch (e) {
+    // ignore any reference errors while evaluating module-scoped names
+  }
+});
+
 
 // -------------------- RENDERER --------------------
 const existingCanvas = document.getElementById('threeCanvas');
