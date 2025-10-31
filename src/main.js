@@ -53,15 +53,6 @@ const pointer = new Vector2();       // for raycasting
 const raycaster = new Raycaster();   // for raycasting
 let hoveredCard = null;              // current hovered sprite
 
-// Ensure glTF lights are active in the main scene
-gltf.scene.traverse((child) => {
-  if (child.isLight) {
-    // If the light is nested, also add it to root scene so it's definitely active
-    if (child.parent !== scene) scene.add(child);
-    // Optional: tune fallback intensity
-    child.intensity = child.intensity ?? 1.0;
-  }
-});
 
 
 // -------------------- FETCH CARDS (3D JSON) --------------------
