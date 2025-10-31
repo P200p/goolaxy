@@ -1,8 +1,24 @@
-// -------------------- IMPORTS --------------------
+// main.js - updated to load scene.gltf, add GLTFLoader, register Service Worker and send image URLs to SW
+// ปรับให้ใช้กับ three.js r180 (ES module) 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Raycaster, Vector2 } from 'three';
+
+// -------------------- REGISTER SERVICE WORKER (ถ้ามี) --------------------
+// src/main.js (ส่วน register SW)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      // ใช้ BASE_URL ของ Vite เพื่อรองรับ base path ที่ไม่ใช่ '/'
+      const swUrl = `${import.meta.env.BASE_URL}service-worker.js`;
+      const reg = await navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL || '/' });
+      console.log('ServiceWorker registered:', reg);
+    } catch (err) {
+      console.warn('ServiceWorker registration failed:', err);
+    }
+  });
+}
 
 // -------------------- SCENE / CAMERA / RENDERER --------------------
 const scene = new THREE.Scene();
@@ -14,7 +30,7 @@ const renderer = new THREE.WebGLRenderer({ canvas: existingCanvas || undefined, 
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 0);
-renderer.outputEncoding = THREE.sRGBEncoding; // ดีสำหรับสีจาก glTF
+renderer.outputEncoding = THREE.sRGBEncoding;
 if (!existingCanvas) document.body.appendChild(renderer.domElement);
 else console.debug('Using existing canvas#threeCanvas for renderer');
 
@@ -24,17 +40,14 @@ const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true
 const sphere = new THREE.Mesh(sphereGeo, sphereMat);
 scene.add(sphere);
 
-// -------------------- LIGHTS (เพิ่มให้ฉากที่มาจาก glTF มักไม่มีไฟ) --------------------
-scene.add(new THREE.AmbientLight(0xffffff, 0.35)); // เบื้องต้นให้สว่างขึ้น
+// -------------------- LIGHTS --------------------
+scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
 hemi.position.set(0, 20, 0);
 scene.add(hemi);
-
 const dir = new THREE.DirectionalLight(0xffffff, 0.8);
 dir.position.set(5, 10, 7);
-dir.castShadow = false;
 scene.add(dir);
-
 const fill = new THREE.PointLight(0xffffff, 0.25);
 fill.position.set(-5, -3, 5);
 scene.add(fill);
@@ -43,47 +56,59 @@ scene.add(fill);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-// -------------------- STATE VARIABLES --------------------
-const loader = new GLTFLoader();
+// -------------------- STATE --------------------
+const gltfLoader = new GLTFLoader();
 const cards = [];                    // interactive meshes (planes) จาก glTF
 const pointer = new Vector2();       // for raycasting
 const raycaster = new Raycaster();   // for raycasting
 let hoveredCard = null;              // current hovered mesh
 
-// -------------------- LOAD glTF SCENE --------------------
-async function loadGLTFScene() {
-  const tryPaths = [
-    '/scene.gltf',
-    '/scene.glb',
-    './scene.gltf',
-    './models/scene.gltf'
-  ];
+// -------------------- HELPER: collect image URLs from a scene --------------------
+function collectImageUrlsFromGLTF(gltfScene) {
+  const urls = [];
+  gltfScene.traverse(child => {
+    if (child.isMesh) {
+      const mat = child.material;
+      if (mat) {
+        // texture map
+        if (mat.map && mat.map.image && mat.map.image.src) urls.push(mat.map.image.src);
+        if (mat.emissiveMap && mat.emissiveMap.image && mat.emissiveMap.image.src) urls.push(mat.emissiveMap.image.src);
+        // material.userData.url support
+        if (mat.userData && mat.userData.url) urls.push(mat.userData.url);
+      }
+      // mesh.userData.url
+      if (child.userData && child.userData.url) urls.push(child.userData.url);
+    }
+    if (child.isSprite && child.material && child.material.map && child.material.map.image && child.material.map.image.src) {
+      urls.push(child.material.map.image.src);
+    }
+  });
+  return Array.from(new Set(urls.filter(Boolean)));
+}
 
+// -------------------- LOAD GLTF SCENE --------------------
+async function loadGLTFScene() {
+  const tryPaths = ['/scene.gltf', '/scene.glb', './scene.gltf', './models/scene.gltf'];
   let lastErr = null;
   for (const p of tryPaths) {
     try {
       console.debug(`Attempting to load GLTF from: ${p}`);
       const gltf = await new Promise((resolve, reject) => {
-        loader.load(p, resolve, undefined, reject);
+        gltfLoader.load(p, resolve, undefined, reject);
       });
 
-      // add loaded content to our three.js scene
       scene.add(gltf.scene);
 
-      // traverse to find interactive planes/meshes (heuristic)
+      // find interactive meshes
       gltf.scene.traverse(child => {
         if (child.isMesh) {
-          // heuristics to decide whether this mesh should act like a "card"
           const name = (child.name || '').toLowerCase();
           const hasUrlInUserData = child.userData && child.userData.url;
           const hasUrlInMaterial = child.material && child.material.userData && child.material.userData.url;
           const likelyCardByName = name.includes('card') || name.includes('plane') || name.includes('link');
-
           if (hasUrlInUserData || hasUrlInMaterial || likelyCardByName) {
-            // store original scale (Vector3 copy) so we can restore exactly later
             child.userData = child.userData || {};
             child.userData.origScale = child.scale.clone();
-            // optionally ensure the plane is double sided if texture looks one-sided
             if (child.material && child.material.side === undefined) child.material.side = THREE.DoubleSide;
             cards.push(child);
           }
@@ -91,19 +116,31 @@ async function loadGLTFScene() {
       });
 
       console.info(`Loaded GLTF from ${p}. Found ${cards.length} interactive mesh(es).`);
+
+      // collect image URLs and send to service worker for precache
+      const foundUrls = collectImageUrlsFromGLTF(gltf.scene);
+      if (foundUrls.length > 0 && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          if (reg.active) {
+            reg.active.postMessage({ type: 'CACHE_URLS', urls: foundUrls });
+            console.log('Sent URLs to SW for precache:', foundUrls.length);
+          }
+        });
+      }
+
       return;
     } catch (err) {
       lastErr = err;
       console.warn(`Error loading ${p}:`, err);
-      // try next path
     }
   }
-
   console.error('Failed to load scene.gltf from any tried path.', lastErr);
 }
+
+// start loading
 loadGLTFScene();
 
-// -------------------- ANIMATE LOOP --------------------
+// -------------------- ANIMATE --------------------
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
@@ -124,18 +161,13 @@ function onMouseMove(event) {
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
-  // intersect the meshes we collected (no need to traverse scene each time)
   const intersects = raycaster.intersectObjects(cards, false);
 
   if (intersects.length > 0) {
     const mesh = intersects[0].object;
     if (hoveredCard !== mesh) {
-      // restore previous
-      if (hoveredCard) {
-        hoveredCard.scale.copy(hoveredCard.userData.origScale);
-      }
+      if (hoveredCard) hoveredCard.scale.copy(hoveredCard.userData.origScale);
       hoveredCard = mesh;
-      // scale uniformly relative to original vector (preserve non-uniform original scales)
       const orig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale.clone() : new THREE.Vector3(1,1,1);
       const HOVER_FACTOR = 1.5;
       hoveredCard.scale.copy(orig.multiplyScalar(HOVER_FACTOR));
@@ -149,7 +181,7 @@ function onMouseMove(event) {
 }
 window.addEventListener('mousemove', onMouseMove, { passive: true });
 
-// -------------------- CLICK HANDLER --------------------
+// -------------------- CLICK --------------------
 function onClick(event) {
   pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -159,7 +191,6 @@ function onClick(event) {
 
   if (intersects.length > 0) {
     const mesh = intersects[0].object;
-    // try multiple places for url
     const url = (mesh.userData && mesh.userData.url) || (mesh.material && mesh.material.userData && mesh.material.userData.url);
     if (url) {
       const message = `พบลิงค์: ${url}\n\nต้องการเปิดลิงค์นี้ไหม?`;
