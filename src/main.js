@@ -47,30 +47,19 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // -------------------- STATE VARIABLES --------------------
-const loader = new ObjectLoader();
-const cards = [];                    // sprites (THREE.Sprite) loaded from cards.json
-const pointer = new Vector2();       // for raycasting
-const raycaster = new Raycaster();   // for raycasting
-let hoveredCard = null;              // current hovered sprite
-
-
-
-// -------------------- FETCH CARDS (3D JSON) --------------------
-// Try a few likely locations for `cards.json` and give helpful console output so it's
-// easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
-// Replace the ObjectLoader + loadCards block with GLTF loading
+// replace ObjectLoader+loadCards block with GLTF loading
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const gltfLoader = new GLTFLoader();
-const animateMixers = [];            // store mixers if GLTF has animations
+const animateMixers = []; // keep if GLTF has animations
 
-// Load scene.gltf from public root (try a couple of likely paths)
+// Load GLB/GLTF, track imported root for safe removal, collect plane meshes as "cards"
 async function loadCards() {
   const tryPaths = [
-    '/scene.gltf',
     '/scene.glb',
-    './scene.gltf',
-    './scene.glb'
+    '/scene.gltf',
+    './scene.glb',
+    './scene.gltf'
   ];
 
   let lastErr = null;
@@ -78,32 +67,30 @@ async function loadCards() {
   for (const p of tryPaths) {
     try {
       console.debug(`Attempting to load glTF from: ${p}`);
-      // gltfLoader.load is callback-based; wrap in Promise for await
-      const gltf = await new Promise((resolve, reject) => {
-        gltfLoader.load(
-          p,
-          (g) => resolve(g),
-          (xhr) => {
-            if (xhr && xhr.total) console.debug(`gltf ${(xhr.loaded / xhr.total) * 100}% loaded`);
-          },
-          (err) => reject(err)
-        );
-      });
+      const gltf = await gltfLoader.loadAsync(p);
 
-      // clear existing scene children (preserve camera, lights if needed)
-      // Remove everything except camera and lights: keep objects that are NOT cameras or lights
-      const toRemove = [];
-      scene.traverse((child) => {
-        if (child !== scene && !child.isCamera && !child.isLight) {
-          toRemove.push(child);
+      // remove previously imported roots only (do not remove camera/light you want to keep)
+      if (scene.userData.importedRoots && scene.userData.importedRoots.length) {
+        scene.userData.importedRoots.forEach(root => { if (root && root.parent) root.parent.remove(root); });
+      }
+      scene.userData.importedRoots = scene.userData.importedRoots || [];
+
+      // add new root and remember it
+      scene.add(gltf.scene);
+      scene.userData.importedRoots.push(gltf.scene);
+
+      // import lights (attach nested lights to scene so they actually affect rendering)
+      const importedLights = [];
+      gltf.scene.traverse((child) => {
+        if (child.isLight) {
+          if (child.parent !== scene) scene.add(child);
+          importedLights.push(child);
         }
       });
-      toRemove.forEach(o => {
-        if (o.parent) o.parent.remove(o);
-      });
-
-      // add loaded gltf scene
-      scene.add(gltf.scene);
+      if (importedLights.length) {
+        scene.userData.importedLights = (scene.userData.importedLights || []).concat(importedLights);
+        console.info(`Imported ${importedLights.length} light(s) from glTF.`);
+      }
 
       // handle animations
       if (gltf.animations && gltf.animations.length) {
@@ -112,22 +99,29 @@ async function loadCards() {
         animateMixers.push(mixer);
       }
 
-      // collect sprites so existing raycast/interaction code keeps working
+      // rebuild cards array from gltf.scene (expect Plane meshes)
+      cards.length = 0; // reuse existing cards declared at file top
       gltf.scene.traverse((child) => {
-        if (child.isSprite) {
-          child.userData = child.userData || {};
-          child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
-          cards.push(child);
+        if (child.isMesh) {
+          // Prefer matching by material.userData.url if exporter writes it
+          const mat = child.material;
+          const url = mat && mat.userData && mat.userData.url;
+          // fallback: accept mesh whose geometry type name contains 'Plane'
+          const isPlane = child.geometry && child.geometry.type && /Plane/i.test(child.geometry.type);
+          if (url || isPlane) {
+            child.userData = child.userData || {};
+            child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
+            cards.push(child);
+          }
         }
       });
 
-      console.info(`Loaded GLTF from ${p}. Found ${cards.length} sprite(s).`);
-      if (cards.length === 0) console.warn('No sprites found in glTF scene.');
+      console.info(`Loaded GLTF from ${p}. Found ${cards.length} card mesh(es).`);
+      if (cards.length === 0) console.warn('No card planes found in glTF scene. Check exported node names or material.userData.');
       return;
     } catch (err) {
       lastErr = err;
       console.warn(`Failed to load ${p}:`, err);
-      // try next path
     }
   }
 
