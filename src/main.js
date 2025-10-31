@@ -11,20 +11,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-
 camera.position.set(0, 0, 6);
-// --- safe debug expose: attach runtime objects to window only if they exist ---
-['scene','camera','renderer','cards','raycaster','pointer','hoveredCard'].forEach(k => {
-  try {
-    // prefer checking global scope first, then module scope variable
-    if (typeof window[k] === 'undefined') {
-      if (typeof eval(k) !== 'undefined') window[k] = eval(k);
-    }
-  } catch (e) {
-    // ignore any reference errors while evaluating module-scoped names
-  }
-});
-
 
 // -------------------- RENDERER --------------------
 const existingCanvas = document.getElementById('threeCanvas');
@@ -60,85 +47,59 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // -------------------- STATE VARIABLES --------------------
-// replace ObjectLoader+loadCards block with GLTF loading
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+const loader = new ObjectLoader();
+const cards = [];                    // sprites (THREE.Sprite) loaded from cards.json
+const pointer = new Vector2();       // for raycasting
+const raycaster = new Raycaster();   // for raycasting
+let hoveredCard = null;              // current hovered sprite
 
-const gltfLoader = new GLTFLoader();
-const animateMixers = []; // keep if GLTF has animations
 
-// Load GLB/GLTF, track imported root for safe removal, collect plane meshes as "cards"
+
+// -------------------- FETCH CARDS (3D JSON) --------------------
+// Try a few likely locations for `cards.json` and give helpful console output so it's
+// easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
 async function loadCards() {
   const tryPaths = [
-    '/scene.glb',
-    '/scene.gltf',
-    './scene.glb',
-    './scene.gltf'
+    '/cards.json',          // Vite serves public files at root
+    './cards.json',         // fallback
+    './file/cards_updated.json', // alternative location
+    './public/cards.json'   // last resort
   ];
 
   let lastErr = null;
-
   for (const p of tryPaths) {
     try {
-      console.debug(`Attempting to load glTF from: ${p}`);
-      const gltf = await gltfLoader.loadAsync(p);
-
-      // remove previously imported roots only (do not remove camera/light you want to keep)
-      if (scene.userData.importedRoots && scene.userData.importedRoots.length) {
-        scene.userData.importedRoots.forEach(root => { if (root && root.parent) root.parent.remove(root); });
+      console.debug(`Attempting to fetch cards JSON from: ${p}`);
+      const res = await fetch(p);
+      if (!res.ok) {
+        lastErr = new Error(`HTTP ${res.status} when fetching ${p}`);
+        console.warn(lastErr.message);
+        continue;
       }
-      scene.userData.importedRoots = scene.userData.importedRoots || [];
+      const data = await res.json();
+      const obj = loader.parse(data);
+      scene.add(obj);
 
-      // add new root and remember it
-      scene.add(gltf.scene);
-      scene.userData.importedRoots.push(gltf.scene);
-
-      // import lights (attach nested lights to scene so they actually affect rendering)
-      const importedLights = [];
-      gltf.scene.traverse((child) => {
-        if (child.isLight) {
-          if (child.parent !== scene) scene.add(child);
-          importedLights.push(child);
-        }
-      });
-      if (importedLights.length) {
-        scene.userData.importedLights = (scene.userData.importedLights || []).concat(importedLights);
-        console.info(`Imported ${importedLights.length} light(s) from glTF.`);
-      }
-
-      // handle animations
-      if (gltf.animations && gltf.animations.length) {
-        const mixer = new THREE.AnimationMixer(gltf.scene);
-        gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
-        animateMixers.push(mixer);
-      }
-
-      // rebuild cards array from gltf.scene (expect Plane meshes)
-      cards.length = 0; // reuse existing cards declared at file top
-      gltf.scene.traverse((child) => {
-        if (child.isMesh) {
-          // Prefer matching by material.userData.url if exporter writes it
-          const mat = child.material;
-          const url = mat && mat.userData && mat.userData.url;
-          // fallback: accept mesh whose geometry type name contains 'Plane'
-          const isPlane = child.geometry && child.geometry.type && /Plane/i.test(child.geometry.type);
-          if (url || isPlane) {
-            child.userData = child.userData || {};
-            child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
-            cards.push(child);
-          }
+      obj.traverse(child => {
+        if (child.isSprite) {
+          // store original scale so hover can be non-destructive
+          child.userData = child.userData || {};
+          child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
+          cards.push(child);
         }
       });
 
-      console.info(`Loaded GLTF from ${p}. Found ${cards.length} card mesh(es).`);
-      if (cards.length === 0) console.warn('No card planes found in glTF scene. Check exported node names or material.userData.');
+      console.info(`Loaded cards object from ${p}. Found ${cards.length} sprite(s).`);
+      if (cards.length === 0) console.warn('No sprites found in parsed cards.json object.');
       return;
     } catch (err) {
       lastErr = err;
-      console.warn(`Failed to load ${p}:`, err);
+      console.warn(`Error loading ${p}:`, err);
+      // try next path
     }
   }
 
-  console.error('Failed to load any glTF paths.', lastErr);
+  console.error('Failed to load cards.json from any tried path.', lastErr);
 }
 
 loadCards();
@@ -157,51 +118,31 @@ animate();
 
 // -------------------- RESIZE --------------------
 window.addEventListener('resize', () => {
-({ x: pointer.x, y: pointer.y } = getPointerNDCCoords(event));
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}, { passive: true });
 
-// -------------------- INTERACTION / HOVER (REPLACE THESE) --------------------
-
-// Helper: compute normalized device coordinates relative to renderer canvas
-function getPointerNDCCoords(event) {
-  const canvas = renderer.domElement;
-  const rect = canvas.getBoundingClientRect();
-  // event may be MouseEvent or TouchEvent
-  const clientX = event.clientX !== undefined ? event.clientX : (event.touches && event.touches[0] && event.touches[0].clientX);
-  const clientY = event.clientY !== undefined ? event.clientY : (event.touches && event.touches[0] && event.touches[0].clientY);
-  const x = ((clientX - rect.left) / rect.width) * 2 - 1;
-  const y = -((clientY - rect.top) / rect.height) * 2 + 1;
-  return { x, y, rect };
-}
-
+// -------------------- INTERACTION / HOVER --------------------
 function onMouseMove(event) {
-  const { x, y } = getPointerNDCCoords(event);
-({ x: pointer.x, y: pointer.y } = getPointerNDCCoords(event));
-
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
-
-  // debug: how many cards we try to hit-test
-  // eslint-disable-next-line no-console
-  console.debug('raycast: cards.length=', cards.length, 'pointer=', pointer);
-
   const intersects = raycaster.intersectObjects(cards, true);
 
-  // debug intersect
   if (intersects.length > 0) {
-    // eslint-disable-next-line no-console
-    console.debug('raycast intersects:', intersects.length, intersects[0].object.name || intersects[0].object.uuid);
-  }
-
-  if (intersects.length > 0) {
-    const obj = intersects[0].object;
-    if (hoveredCard !== obj) {
+    const sprite = intersects[0].object;
+       if (hoveredCard !== sprite) {
+      // restore previous
       if (hoveredCard) {
         const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
         hoveredCard.scale.setScalar(prevOrig);
       }
-      hoveredCard = obj;
+      hoveredCard = sprite;
+      // non-destructive visual feedback (scale-only)
       const orig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : (hoveredCard.scale.x || 1);
-      const HOVER_FACTOR = 1.2; // smaller factor to be less jarring
+      const HOVER_FACTOR = 1.5;
       hoveredCard.scale.setScalar(orig * HOVER_FACTOR);
     }
   } else {
@@ -212,65 +153,29 @@ function onMouseMove(event) {
     }
   }
 }
-window.addEventListener('mousemove', onMouseMove, { passive: true });
+window.addEventListener("mousemove", onMouseMove, { passive: true });
 
-// -------------------- Click handler (replacement) --------------------
-function findUrlOnObjectOrParents(obj) {
-  // check immediate object
-  if (!obj) return null;
-  if (obj.userData && obj.userData.url) return obj.userData.url;
-  // material.userData
-  if (obj.material && obj.material.userData && obj.material.userData.url) return obj.material.userData.url;
-  // walk parents up to scene root
-  let p = obj.parent;
-  while (p) {
-    if (p.userData && p.userData.url) return p.userData.url;
-    if (p.material && p.material.userData && p.material.userData.url) return p.material.userData.url;
-    p = p.parent;
-  }
-  return null;
-}
 
+
+// -------------------- OPTIONAL: Click / Pointer handlers (example) --------------------
 function onClick(event) {
-  const { x, y, rect } = getPointerNDCCoords(event);
-  pointer.x = x;
-  pointer.y = y;
-
-  // debug: show pointer and canvas rect to verify coordinate mapping
-  // eslint-disable-next-line no-console
-  console.debug('onClick pointer', pointer, 'canvasRect', rect);
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
   raycaster.setFromCamera(pointer, camera);
-  // debug: confirm we are raycasting against cards
-  // eslint-disable-next-line no-console
-  console.debug('onClick raycasting against cards.length=', cards.length);
-
-  const intersects = raycaster.intersectObjects(cards, true);
-
-  // debug: list first few intersects
-  if (intersects.length > 0) {
-    // eslint-disable-next-line no-console
-    console.debug('onClick intersects count', intersects.length, 'top object', intersects[0].object.name || intersects[0].object.uuid);
-  } else {
-    // eslint-disable-next-line no-console
-    console.debug('onClick no intersects');
-  }
+  
+  // ตรวจสอบ cards เท่านั้น (ไม่มี iframe cube แล้ว)
+  const intersects = raycaster.intersectObjects(cards, true); // recursive
 
   if (intersects.length > 0) {
-    const hit = intersects[0].object;
-    const url = findUrlOnObjectOrParents(hit);
-    // debug: show object and found URL
-    // eslint-disable-next-line no-console
-    console.debug('onClick hit object', hit.name || hit.uuid, 'found url', url);
-    if (url) {
+    const sprite = intersects[0].object;
+    if (sprite.material && sprite.material.userData && sprite.material.userData.url) {
+      const url = sprite.material.userData.url;
       const message = `พบลิงค์: ${url}\n\nต้องการเปิดลิงค์นี้ไหม?`;
       if (window.confirm(message)) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        window.open(url, "_blank", "noopener,noreferrer");
       }
-    } else {
-      // eslint-disable-next-line no-console
-      console.debug('onClick: no url found on hit object or parents. Inspect object:', hit);
     }
   }
 }
-window.addEventListener('click', onClick);
+window.addEventListener("click", onClick);
