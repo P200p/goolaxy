@@ -60,10 +60,9 @@ let hoveredCard = null;              // current hovered sprite
 // easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
 async function loadCards() {
   const tryPaths = [
-    '/cards.json',          // Vite serves public files at root
-    './cards.json',         // fallback
-    './file/cards_updated.json', // alternative location
-    './public/cards.json'   // last resort
+    '/project.json',          // Vite serves public files at root
+    './file/project.json', // alternative location
+    './public/project.json'   // last resort
   ];
 
   let lastErr = null;

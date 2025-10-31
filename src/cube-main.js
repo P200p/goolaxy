@@ -1,169 +1,181 @@
+// -------------------- IMPORTS --------------------
 import * as THREE from 'three';
-import { CSS3DRenderer, CSS3DObject } from 'three/examples/jsm/renderers/CSS3DRenderer.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ObjectLoader, Raycaster, Vector2 } from "three";
 
-let camera, scene, renderer, controls;
-let cube;
+// -------------------- SCENE / CAMERA / RENDERER --------------------
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(0, 0, 6);
 
-const websites = [
-  { name: 'GOONEE', url: 'https://goonee.netlify.app/' },
-  { name: 'SHARKKADAW', url: 'https://sharkkadaw.netlify.app/' },
-  { name: 'GOONEE LAB', url: 'https://goonee.netlify.app/lab' },
-  { name: 'GOOMETA', url: 'https://goometa.figma.site/' }
-];
-
-init();
-animate();
-
-function init() {
-  console.log('🚀 Initializing 3D Cube...');
-  
-  // Camera
-  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-  camera.position.set(500, 350, 750);
-  
-  console.log('📷 Camera positioned at:', camera.position);
-
-  // Scene
-  scene = new THREE.Scene();
-
-  // Create cube
-  createCube();
-
-  // Renderer
-  renderer = new CSS3DRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+// -------------------- RENDERER --------------------
+const existingCanvas = document.getElementById('threeCanvas');
+const renderer = new THREE.WebGLRenderer({ canvas: existingCanvas || undefined, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+if (!existingCanvas) {
   document.body.appendChild(renderer.domElement);
-
-  // Controls
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.minDistance = 500;
-  controls.maxDistance = 2000;
-  
-  // เปิดการใช้งาน touch
-  controls.enablePan = true;
-  controls.enableZoom = true;
-  controls.enableRotate = true;
-  
-  // ปรับความไวสำหรับ touch
-  controls.rotateSpeed = 1.0;
-  controls.zoomSpeed = 1.2;
-  controls.panSpeed = 0.8;
-
-  // Events
-  window.addEventListener('resize', onWindowResize);
+} else {
+  console.debug('Using existing canvas#threeCanvas for renderer');
 }
 
-function createCube() {
-  cube = new THREE.Object3D();
+// -------------------- OBJECTS --------------------
+// ตัวอย่าง: background sphere
+const sphereGeo = new THREE.SphereGeometry(150, 64, 64);
+const sphereMat = new THREE.MeshBasicMaterial({
+  color: 0x00ff00,
+  wireframe: true,
+  side: THREE.BackSide
+});
+const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+scene.add(sphere);
 
-  const sides = [
-    { position: [ 250, 0, 0 ], rotation: [ 0, Math.PI / 2, 0 ] }, // right
-    { position: [ - 250, 0, 0 ], rotation: [ 0, - Math.PI / 2, 0 ] }, // left
-    { position: [ 0, 250, 0 ], rotation: [ Math.PI / 2, 0, 0 ] }, // top
-    { position: [ 0, - 250, 0 ], rotation: [ - Math.PI / 2, 0, 0 ] } // bottom
+// -------------------- LIGHTS --------------------
+scene.add(new THREE.AmbientLight(0x404040));
+const light = new THREE.PointLight(0xffffff, 1.2);
+light.position.set(5, 5, 5);
+scene.add(light);
+
+// -------------------- CONTROLS --------------------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// -------------------- STATE VARIABLES --------------------
+const loader = new ObjectLoader();
+const cards = [];                    // sprites (THREE.Sprite) loaded from cards.json
+const pointer = new Vector2();       // for raycasting
+const raycaster = new Raycaster();   // for raycasting
+let hoveredCard = null;              // current hovered sprite
+
+
+
+// -------------------- FETCH CARDS (3D JSON) --------------------
+// Try a few likely locations for `cards.json` and give helpful console output so it's
+// easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
+async function loadCards() {
+  const tryPaths = [
+    '/cards.json',          // Vite serves public files at root
+    './cards.json',         // fallback
+    './file/cards_updated.json', // alternative location
+    './public/cards.json'   // last resort
   ];
 
-  for (let i = 0; i < 4; i ++) {
-    const element = createIframe(websites[ i ]);
-    const object = new CSS3DObject(element);
+  let lastErr = null;
+  for (const p of tryPaths) {
+    try {
+      console.debug(`Attempting to fetch cards JSON from: ${p}`);
+      const res = await fetch(p);
+      if (!res.ok) {
+        lastErr = new Error(`HTTP ${res.status} when fetching ${p}`);
+        console.warn(lastErr.message);
+        continue;
+      }
+      const data = await res.json();
+      const obj = loader.parse(data);
+      scene.add(obj);
 
-    object.position.set(...sides[ i ].position);
-    object.rotation.set(...sides[ i ].rotation);
+      obj.traverse(child => {
+        if (child.isSprite) {
+          // store original scale so hover can be non-destructive
+          child.userData = child.userData || {};
+          child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
+          cards.push(child);
+        }
+      });
 
-    cube.add(object);
-  }
-
-  scene.add(cube);
-  
-  console.log('🎲 Cube created with', cube.children.length, 'faces');
-  console.log('📋 Websites:', websites.map(w => w.name));
-}
-
-function createIframe(site) {
-  const div = document.createElement('div');
-  div.style.width = '480px';
-  div.style.height = '360px';
-  div.style.backgroundColor = '#1a1a2e';
-  div.style.border = '2px solid #00ffff';
-  div.style.borderRadius = '8px';
-  div.style.display = 'flex';
-  div.style.alignItems = 'center';
-  div.style.justifyContent = 'center';
-  div.style.color = '#00ffff';
-  div.style.fontSize = '18px';
-  div.style.fontWeight = 'bold';
-
-  const iframe = document.createElement('iframe');
-  iframe.style.width = '480px';
-  iframe.style.height = '360px';
-  iframe.style.border = '0px';
-  iframe.src = site.url;
-  iframe.title = site.name;
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
-
-  // จัดการ error
-  iframe.onerror = () => {
-    div.innerHTML = `<div style="text-align: center;">
-      <div>❌ Cannot load</div>
-      <div style="font-size: 14px; margin-top: 10px;">${site.name}</div>
-      <div style="font-size: 12px; margin-top: 5px; opacity: 0.7;">X-Frame-Options blocked</div>
-    </div>`;
-  };
-
-  div.appendChild(iframe);
-
-  return div;
-}
-
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  render();
-}
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  // Auto rotate (ปิดไว้ก่อนเพื่อให้ controls ทำงาน)
-  // cube.rotation.y += 0.005;
-
-  // Update controls
-  controls.update();
-
-  render();
-}
-
-function render() {
-  renderer.render(scene, camera);
-}
-
-// Global access for buttons
-window.rotateTo = function(index) {
-  const targetY = - index * Math.PI / 2;
-
-  // Simple rotation animation
-  const startY = cube.rotation.y;
-  const duration = 1000;
-  const startTime = Date.now();
-
-  function animateRotation() {
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-
-    cube.rotation.y = startY + (targetY - startY) * eased;
-
-    if (progress < 1) {
-      requestAnimationFrame(animateRotation);
+      console.info(`Loaded cards object from ${p}. Found ${cards.length} sprite(s).`);
+      if (cards.length === 0) console.warn('No sprites found in parsed cards.json object.');
+      return;
+    } catch (err) {
+      lastErr = err;
+      console.warn(`Error loading ${p}:`, err);
+      // try next path
     }
   }
 
-  animateRotation();
-};
+  console.error('Failed to load cards.json from any tried path.', lastErr);
+}
 
-console.log('🌐 Simple CSS3D Cube initialized!');
-console.log('Available websites:', websites.map((w, i) => `${i}: ${w.name}`));
+loadCards();
+
+// -------------------- ANIMATE LOOP --------------------
+function animate() {
+  requestAnimationFrame(animate);
+
+  // If you later add editor-driven animation, make sure it doesn't overwrite authored positions here.
+  controls.update();
+  
+  // Render scene
+  renderer.render(scene, camera);
+}
+animate();
+
+// -------------------- RESIZE --------------------
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}, { passive: true });
+
+// -------------------- INTERACTION / HOVER --------------------
+function onMouseMove(event) {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObjects(cards, true);
+
+  if (intersects.length > 0) {
+    const sprite = intersects[0].object;
+       if (hoveredCard !== sprite) {
+      // restore previous
+      if (hoveredCard) {
+        const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
+        hoveredCard.scale.setScalar(prevOrig);
+      }
+      hoveredCard = sprite;
+      // non-destructive visual feedback (scale-only)
+      const orig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : (hoveredCard.scale.x || 1);
+      const HOVER_FACTOR = 1.5;
+      hoveredCard.scale.setScalar(orig * HOVER_FACTOR);
+    }
+  } else {
+    if (hoveredCard) {
+      const prevOrig = hoveredCard.userData && hoveredCard.userData.origScale ? hoveredCard.userData.origScale : 1;
+      hoveredCard.scale.setScalar(prevOrig);
+      hoveredCard = null;
+    }
+  }
+}
+window.addEventListener("mousemove", onMouseMove, { passive: true });
+
+
+
+// -------------------- OPTIONAL: Click / Pointer handlers (example) --------------------
+function onClick(event) {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+  
+  // ตรวจสอบ cards เท่านั้น (ไม่มี iframe cube แล้ว)
+  const intersects = raycaster.intersectObjects(cards, true); // recursive
+
+  if (intersects.length > 0) {
+    const sprite = intersects[0].object;
+    if (sprite.material && sprite.material.userData && sprite.material.userData.url) {
+      const url = sprite.material.userData.url;
+      const message = `พบลิงค์: ${url}\n\nต้องการเปิดลิงค์นี้ไหม?`;
+      if (window.confirm(message)) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    }
+  }
+}
+window.addEventListener("click", onClick);
