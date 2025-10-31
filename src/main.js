@@ -58,47 +58,80 @@ let hoveredCard = null;              // current hovered sprite
 // -------------------- FETCH CARDS (3D JSON) --------------------
 // Try a few likely locations for `cards.json` and give helpful console output so it's
 // easy to diagnose why a JSON didn't load (wrong path, server not serving `public/`, etc.).
+// Replace the ObjectLoader + loadCards block with GLTF loading
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+const gltfLoader = new GLTFLoader();
+const animateMixers = [];            // store mixers if GLTF has animations
+
+// Load scene.gltf from public root (try a couple of likely paths)
 async function loadCards() {
   const tryPaths = [
-    '/project.json',          // Vite serves public files at root
-    './file/project.json', // alternative location
-    './public/project.json'   // last resort
+    '/scene.gltf',
+    '/scene.glb',
+    './scene.gltf',
+    './scene.glb'
   ];
 
   let lastErr = null;
+
   for (const p of tryPaths) {
     try {
-      console.debug(`Attempting to fetch project JSON from: ${p}`);
-      const res = await fetch(p);
-      if (!res.ok) {
-        lastErr = new Error(`HTTP ${res.status} when fetching ${p}`);
-        console.warn(lastErr.message);
-        continue;
-      }
-      const data = await res.json();
-      const obj = loader.parse(data);
-      scene.add(obj);
+      console.debug(`Attempting to load glTF from: ${p}`);
+      // gltfLoader.load is callback-based; wrap in Promise for await
+      const gltf = await new Promise((resolve, reject) => {
+        gltfLoader.load(
+          p,
+          (g) => resolve(g),
+          (xhr) => {
+            if (xhr && xhr.total) console.debug(`gltf ${(xhr.loaded / xhr.total) * 100}% loaded`);
+          },
+          (err) => reject(err)
+        );
+      });
 
-      obj.traverse(child => {
+      // clear existing scene children (preserve camera, lights if needed)
+      // Remove everything except camera and lights: keep objects that are NOT cameras or lights
+      const toRemove = [];
+      scene.traverse((child) => {
+        if (child !== scene && !child.isCamera && !child.isLight) {
+          toRemove.push(child);
+        }
+      });
+      toRemove.forEach(o => {
+        if (o.parent) o.parent.remove(o);
+      });
+
+      // add loaded gltf scene
+      scene.add(gltf.scene);
+
+      // handle animations
+      if (gltf.animations && gltf.animations.length) {
+        const mixer = new THREE.AnimationMixer(gltf.scene);
+        gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+        animateMixers.push(mixer);
+      }
+
+      // collect sprites so existing raycast/interaction code keeps working
+      gltf.scene.traverse((child) => {
         if (child.isSprite) {
-          // store original scale so hover can be non-destructive
           child.userData = child.userData || {};
           child.userData.origScale = child.scale && child.scale.x ? child.scale.x : 1;
           cards.push(child);
         }
       });
 
-      console.info(`Loaded project object from ${p}. Found ${cards.length} sprite(s).`);
-      if (cards.length === 0) console.warn('No sprites found in parsed project.json object.');
+      console.info(`Loaded GLTF from ${p}. Found ${cards.length} sprite(s).`);
+      if (cards.length === 0) console.warn('No sprites found in glTF scene.');
       return;
     } catch (err) {
       lastErr = err;
-      console.warn(`Error loading ${p}:`, err);
+      console.warn(`Failed to load ${p}:`, err);
       // try next path
     }
   }
 
-  console.error('Failed to load project.json from any tried path.', lastErr);
+  console.error('Failed to load any glTF paths.', lastErr);
 }
 
 loadCards();
