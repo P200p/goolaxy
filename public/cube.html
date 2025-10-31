@@ -2,29 +2,25 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <title>3D Cube with 2 Iframes (three.js R180)</title>
+  <title>3D Cube with 2 Iframes (three.js R180) - fixed imports</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     html,body{height:100%;margin:0;overflow:hidden;background:#111}
     #container{width:100%;height:100%;position:relative}
     canvas.webgl{position:absolute;left:0;top:0;display:block}
-    /* CSS3D renderer places DOM elements; put it above canvas */
     .css3d{position:absolute;left:0;top:0;pointer-events:none}
     .iframe-face{
-      width:600px; height:360px; /* ขนาดของ iframe บนหน้า cube — ปรับได้ */
+      width:600px; height:360px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.6);
       border: 2px solid rgba(255,255,255,0.06);
       background: #000;
-      pointer-events:auto; /* อนุญาตให้คลิก iframe */
+      pointer-events:auto;
     }
-    /* ปุ่มช่วย (ถ้าฝังไม่ได้) */
+    .iframe-face iframe{width:100%;height:100%;border:0}
     .fallback {
       color:#fff; font-size:13px; padding:6px 10px; background:rgba(0,0,0,0.6);
       border-radius:6px; display:inline-block; margin-top:6px;
     }
-    /* บังคับให้ iframe เต็ม element */
-    .iframe-face iframe{width:100%;height:100%;border:0}
-    /* สไตล์คำแนะนำเล็กๆ */
     #hint {
       position: absolute; left: 12px; top: 12px; z-index:9999;
       color:#ddd; font-family:system-ui,Segoe UI,Roboto; font-size:13px;
@@ -35,26 +31,19 @@
 <body>
   <div id="container">
     <div id="hint">Drag rotate / scroll to zoom. Hover iframe to interact (Orbit disabled while over iframe).</div>
-    <!-- Renderers mount points -->
     <div id="three-root"></div>
   </div>
 
   <script type="module">
-  // -----------------------------------------
-  // 3D Cube with two iframes using three.js R180
-  // -----------------------------------------
+  // --- IMPORTANT: use full CDN module URLs (no bare specifiers) ---
   import * as THREE from 'https://unpkg.com/three@0.180.0/build/three.module.js';
   import { OrbitControls } from 'https://unpkg.com/three@0.180.0/examples/jsm/controls/OrbitControls.js';
   import { CSS3DRenderer, CSS3DObject } from 'https://unpkg.com/three@0.180.0/examples/jsm/renderers/CSS3DRenderer.js';
 
-  // URLs ที่จะแสดงใน 2 หน้า (ปรับตามต้องการ)
   const URL_A = 'https://goonee.netlify.app/';
   const URL_B = 'https://goorum.netlify.app/';
+  const CUBE_SIZE = 3;
 
-  // ขนาด cube (unit)
-  const CUBE_SIZE = 3; // ปรับขนาด cube ได้
-
-  // container
   const container = document.getElementById('three-root');
   container.style.width = '100%';
   container.style.height = '100%';
@@ -62,21 +51,18 @@
   container.style.left = '0';
   container.style.top = '0';
 
-  // scenes & camera
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
 
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(4, 2.5, 6);
 
-  // WebGL renderer (for cube visuals)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.domElement.classList.add('webgl');
   container.appendChild(renderer.domElement);
 
-  // CSS3D renderer (for iframe DOM elements)
   const cssRenderer = new CSS3DRenderer();
   cssRenderer.setSize(window.innerWidth, window.innerHeight);
   cssRenderer.domElement.style.position = 'absolute';
@@ -85,50 +71,40 @@
   cssRenderer.domElement.classList.add('css3d');
   container.appendChild(cssRenderer.domElement);
 
-  // Lights (so WebGL cube looks decent)
   const ambient = new THREE.AmbientLight(0xffffff, 0.6); scene.add(ambient);
   const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(5,6,4); scene.add(dir);
 
-  // cube geometry + materials (six faces; two faces will have iframes on top)
   const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
-
-  // create basic colorful materials for other faces
   const mats = [
-    new THREE.MeshStandardMaterial({ color: 0x2a6fdb }), // px
-    new THREE.MeshStandardMaterial({ color: 0x2a6fdb }), // nx
-    new THREE.MeshStandardMaterial({ color: 0x3dbf7f }), // py
-    new THREE.MeshStandardMaterial({ color: 0x3dbf7f }), // ny
-    new THREE.MeshStandardMaterial({ color: 0xffaa33 }), // pz
-    new THREE.MeshStandardMaterial({ color: 0xffaa33 }), // nz
+    new THREE.MeshStandardMaterial({ color: 0x2a6fdb }),
+    new THREE.MeshStandardMaterial({ color: 0x2a6fdb }),
+    new THREE.MeshStandardMaterial({ color: 0x3dbf7f }),
+    new THREE.MeshStandardMaterial({ color: 0x3dbf7f }),
+    new THREE.MeshStandardMaterial({ color: 0xffaa33 }),
+    new THREE.MeshStandardMaterial({ color: 0xffaa33 }),
   ];
-
   const cube = new THREE.Mesh(geo, mats);
   cube.castShadow = true;
   cube.receiveShadow = true;
   scene.add(cube);
 
-  // Orbit controls
-  const controls = new OrbitControls(camera, cssRenderer.domElement); // use css renderer DOM so pointer hits DOM first
+  // Use cssRenderer.domElement for OrbitControls to allow pointer interactions with CSS layer
+  const controls = new OrbitControls(camera, cssRenderer.domElement);
   controls.enableDamping = true;
   controls.target.set(0,0,0);
 
-  // Helper function: create an iframe DOM element wrapped in a div (for CSS3DObject)
   function makeIframeElement(url, width=600, height=360) {
     const wrapper = document.createElement('div');
     wrapper.className = 'iframe-face';
     wrapper.style.width = width + 'px';
     wrapper.style.height = height + 'px';
-    // create iframe
     const iframe = document.createElement('iframe');
     iframe.src = url;
     iframe.setAttribute('allowfullscreen', '');
     iframe.style.pointerEvents = 'auto';
     iframe.style.background = '#000';
-    // optional: sandbox attribute - uncomment to restrict (may break some sites)
-    // iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
     wrapper.appendChild(iframe);
 
-    // fallback link if site blocks iframe - small notice
     const fallback = document.createElement('div');
     fallback.className = 'fallback';
     fallback.textContent = 'If the site blocks embedding, click to open in new tab';
@@ -137,7 +113,6 @@
     fallback.onclick = () => window.open(url, '_blank', 'noopener,noreferrer');
     wrapper.appendChild(fallback);
 
-    // detect if iframe failed to load within 4s -> show fallback (not 100% reliable due to cross-origin)
     let loaded = false;
     iframe.addEventListener('load', () => {
       loaded = true;
@@ -147,55 +122,38 @@
       if (!loaded) fallback.style.display = 'inline-block';
     }, 4000);
 
-    // when pointer enters iframe area, we disable OrbitControls to allow interaction
     wrapper.addEventListener('mouseenter', () => controls.enabled = false);
     wrapper.addEventListener('mouseleave', () => controls.enabled = true);
 
     return wrapper;
   }
 
-  // Create two CSS3DObjects (one for +Z face, one for +X face)
-  // For placement: cube center at 0; face offsets = CUBE_SIZE/2
   const half = CUBE_SIZE / 2;
-
-  // Face +Z (front)
   const elementA = makeIframeElement(URL_A, 600, 360);
   const cssObjA = new CSS3DObject(elementA);
-  cssObjA.position.set(0, 0, half + 0.001); // small epsilon to avoid z-fighting with WebGL face
-  // rotate nothing (facing +Z), but CSS3D uses same coordinate system
-  // scale CSS element visually to match cube face size: CSS size must be scaled relative to world units.
-  // We'll compute scale: worldFaceHeight (CUBE_SIZE) corresponds to element height px -> use scale factor.
-  const worldFaceHeight = CUBE_SIZE;
-  const elementPxHeight = 360; // must match used height
-  const scaleA = worldFaceHeight / (elementPxHeight / 100); // heuristic; we will apply explicit scale factor below instead
-  // Simpler: compute scale so that element's height fits cube face: scale = CUBE_SIZE / (pxHeight / PPI)
-  // Using an empirical factor: 0.01 (adjustable) => px 100 = 1 unit. We'll use 0.01
-  const pxToUnit = 0.01;
+  cssObjA.position.set(0, 0, half + 0.001);
+  const pxToUnit = 0.01; // ปรับถ้าขนาดไม่พอดี
   cssObjA.scale.set(pxToUnit, pxToUnit, pxToUnit);
   scene.add(cssObjA);
 
-  // Face +X (right)
   const elementB = makeIframeElement(URL_B, 600, 360);
   const cssObjB = new CSS3DObject(elementB);
   cssObjB.position.set(half + 0.001, 0, 0);
-  cssObjB.rotation.y = - Math.PI / 2; // rotate to face +X
+  cssObjB.rotation.y = - Math.PI / 2;
   cssObjB.scale.set(pxToUnit, pxToUnit, pxToUnit);
   scene.add(cssObjB);
 
-  // OPTIONAL: add thin white frame meshes on those faces (WebGL) to make them look integrated
   const frameMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent:true, opacity:0.06 });
-  const faceGeo = new THREE.PlaneGeometry(CUBE_SIZE * 0.98, CUBE_SIZE * 0.58); // adjust aspect to iframe aspect ratio
+  const faceGeo = new THREE.PlaneGeometry(CUBE_SIZE * 0.98, CUBE_SIZE * 0.58);
   const frameA = new THREE.Mesh(faceGeo, frameMat);
   frameA.position.copy(cssObjA.position);
   frameA.rotation.copy(cssObjA.rotation);
   scene.add(frameA);
-
   const frameB = new THREE.Mesh(faceGeo, frameMat);
   frameB.position.copy(cssObjB.position);
   frameB.rotation.copy(cssObjB.rotation);
   scene.add(frameB);
 
-  // Resize handling
   window.addEventListener('resize', onWindowResize, { passive: true });
   function onWindowResize() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -205,21 +163,14 @@
     cssRenderer.setSize(w,h);
   }
 
-  // Animation loop
-  const clock = new THREE.Clock();
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
-    cssRenderer.render(scene, camera); // render CSS3D objects with same scene/camera
+    cssRenderer.render(scene, camera);
   }
   animate();
 
-  // Optional: center the view on the cube nicely
-  controls.target.set(0,0,0);
-  controls.update();
-
-  // show simple instructions on console
   console.log('Cube with iframes ready. If iframe content doesn\'t appear the target site may block embedding (X-Frame-Options).');
 
   </script>
